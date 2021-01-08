@@ -3,12 +3,12 @@
 import psycopg2 as pg2
 import requests
 import os
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from shutil import rmtree
 
 USER_AGENT = 'Mozilla/5.0'
 CONTENT_DIR = "./articles"
-
+NAVER_NEWS_BASE_URL = "news.naver.com"
 
 def mkdir_p(path):
     import errno
@@ -53,6 +53,11 @@ def get_text_without_children(tag):
 
 def parse_article_content(article_html, tag, id):
     content = ''
+
+    div = article_html.find(tag, id=id)
+    for element in div(text=lambda text: isinstance(text, Comment)):
+        element.extract()
+
     divs = article_html.find_all(tag, {"id": id})
 
     for i in divs:
@@ -61,8 +66,9 @@ def parse_article_content(article_html, tag, id):
     return content
 
 
-def save_article_content_txt(article_no, content):
-    f = open(os.path.join(CONTENT_DIR, str(article_no) + ".txt"), 'w')
+def save_article_content_txt(article_no, title, content):
+    f = open(os.path.join(CONTENT_DIR, str(article_no) + ".txt"), 'w', -1, "utf-8")
+    f.write(title + '\n')
     f.write(content + '\n')
     f.close()
 
@@ -74,9 +80,11 @@ def get_article_content():
         article_page_response = requests.get(article['url'], headers={'User-Agent': USER_AGENT})
         article_html = BeautifulSoup(article_page_response.text, "html.parser")
 
-        content = parse_article_content(article_html, 'div', 'articleBodyContents')
-        save_article_content_txt(article_no, content)
-
+        url = article_html.find('meta', property='og:url')
+        print(url['content'])
+        if NAVER_NEWS_BASE_URL in url['content'] :
+            content = parse_article_content(article_html, 'div', 'articleBodyContents')
+            save_article_content_txt(article_no, article['title'], content)
 
 if __name__ == "__main__":
     mkdir_p(CONTENT_DIR)

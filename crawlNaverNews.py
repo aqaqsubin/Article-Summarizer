@@ -28,8 +28,8 @@ def get_search_page_list():
     search_page_list = []
     url = NAVER_SEARCH_POLICE_URL
 
-    while True:
-    # for i in range(10):
+    #while True:
+    for i in range(10):
         try:
             search_response = requests.get(url, headers={'User-Agent': USER_AGENT})
             search_html = BeautifulSoup(search_response.text, "html.parser")
@@ -59,13 +59,23 @@ def parse_article_info(article):
 
 
 def insert_to_db():
-    os.system("psql newsdb < " + SQL_FILE_PATH)
-    os.remove(SQL_FILE_PATH)
+    import errno
+
+    try :
+        os.system("set PGPASSWORD=123")
+        os.system("psql -U subinkim newsdb < " + SQL_FILE_PATH)
+        os.remove(SQL_FILE_PATH)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            pass
+        else:
+            raise
 
 def convert_txt(text): # Convert Single Quote -> Double Quote, Wrapping Text with Single Quote
     return "\'"+text.replace("\'","\"")+"\'"
 
-def save_article_info(article_info, flag=False):
+def save_article_info(article_info):
+
     if not NAVER_NEWS_BASE_URL in article_info['src_addr']: return
 
     baseQuery = "INSERT INTO news_list (title, media, url) VALUES ({title}, {media}, {url});"
@@ -80,8 +90,6 @@ def save_article_info(article_info, flag=False):
     fileSize = fileStat.st_size
 
     if fileSize > 100 * 1000: insert_to_db()
-    elif flag : insert_to_db()
-
 
 def get_article_list():
 
@@ -101,7 +109,7 @@ def get_article_list():
 
             save_article_info(article_info)
 
-    save_article_info(article_info, flag=True)
+    insert_to_db()
 
 if __name__ == "__main__":
     get_article_list()
