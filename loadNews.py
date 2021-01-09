@@ -66,11 +66,17 @@ def parse_article_content(article_html, tag, id):
     return content
 
 
-def save_article_content_txt(article_no, title, content, media):
-    f = open(os.path.join(CONTENT_DIR, str(article_no) + ".txt"), 'w', -1, "utf-8")
-    f.write(title + '\n')
-    f.write(content + '\n')
-    f.write(media + '\n')
+def save_article_content_txt(title, content, media):
+
+    path = os.path.join(CONTENT_DIR, media)
+    mkdir_p(path)
+
+    files = os.listdir(path)
+
+    f = open(os.path.join(path, str(len(files)) + ".txt"), 'w', -1, "utf-8")
+    f.write(title)
+    f.write(content)
+    f.write(media)
     f.close()
 
 
@@ -85,7 +91,7 @@ def get_article_content():
         print(url['content'])
         if NAVER_NEWS_BASE_URL in url['content'] :
             content = parse_article_content(article_html, 'div', 'articleBodyContents')
-            save_article_content_txt(article_no, article['title'], content, article['media'])
+            save_article_content_txt(article['title'], content, article['media'])
 
 if __name__ == "__main__":
     mkdir_p(CONTENT_DIR)
