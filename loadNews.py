@@ -7,7 +7,8 @@ from bs4 import BeautifulSoup, Comment
 from shutil import rmtree
 
 USER_AGENT = 'Mozilla/5.0'
-CONTENT_DIR = "./articles"
+BASE_DIR = "articles"
+CONTENT_DIR = os.path.join(BASE_DIR, "Origin-Data")
 NAVER_NEWS_BASE_URL = "news.naver.com"
 
 def mkdir_p(path):

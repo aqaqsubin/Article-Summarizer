@@ -13,9 +13,9 @@ from shutil import rmtree
 
 nltk.download('punkt')
 
-BASE_DIR = "."
-TARGET_PATH = os.path.join(BASE_DIR, "preprocessed")
-ARTICLE_MEDIA_PATH = os.path.join(BASE_DIR, "articles")
+BASE_DIR = "articles"
+ARTICLE_MEDIA_PATH = os.path.join(BASE_DIR,"Origin-Data")
+TARGET_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
 SWORDS_FILE_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
 
 

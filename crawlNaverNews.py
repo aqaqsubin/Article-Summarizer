@@ -55,15 +55,13 @@ def parse_article_info(article):
     try:
         media = get_text_without_children(divs[0])
     except Exception as e :
-        media = None
+        raise("Error Appeared : ", e)
     src_addr = article.select_one("div.news_info > div.info_group > a:last-of-type")["href"]
 
     return title, media, src_addr
 
 
 def insert_to_db():
-    import errno
-
     try:
         os.system("set PGPASSWORD=123")
         os.system("psql -U subinkim newsdb < " + SQL_FILE_PATH)

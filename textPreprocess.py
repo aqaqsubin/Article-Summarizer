@@ -10,9 +10,9 @@ from shutil import rmtree
 nltk.download('punkt')
 
 #BASE_DIR = "/content/gdrive/My Drive/Colab Notebooks/Text-preprocessing-Data/"
-BASE_DIR = "."
-ARTICLE_MEDIA_PATH = os.path.join(BASE_DIR,"articles")
-TARGET_PATH = os.path.join(BASE_DIR,"preprocessed")
+BASE_DIR = "articles"
+ARTICLE_MEDIA_PATH = os.path.join(BASE_DIR,"Origin-Data")
+TARGET_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
 SWORDS_FILE_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
 
 def readArticle(filename):
