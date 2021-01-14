@@ -1,8 +1,8 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 from konlpy.tag import Komoran
 import networkx
 import re
+from shutil import rmtree
 import os
 import math
 
@@ -49,38 +49,26 @@ class TextRank:
         self.tfidf_vectorizer = TfidfVectorizer()
         self.tfidf_matrix = {}
 
-    def loadSents(self, document, tokenizer, similarity='jaccard'):
-        def jaccard_similarity(a, b):
-            n = len(a.intersection(b))
-            return n / float(len(a) + len(b) - n) / (math.log(len(a) + 1) * math.log(len(b) + 1))
-
-        def tfidf_cosine_similarity(i, j):
-            return cosine_similarity(self.tfidf_matrix[i - 1:i], self.tfidf_matrix[j - 1:j])[0, 0]
+    def loadSents(self, document, tokenizer):
 
         sentSet = []
         for origin, proc in document.getSentsZip():
             tagged = set(filter(None, tokenizer(proc)))
-            print(tagged)
             if len(tagged) < 2: continue
             self.dictCount[len(self.dictCount)] = origin
             sentSet.append(tagged)
 
         self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(document.getOriginSet())
 
-        if similarity is not 'jaccard':
-            for i in range(1, len(self.dictCount)):
-                for j in range(i + 1, len(self.dictCount)):
-                    s = tfidf_cosine_similarity(i, j)
+        sents_distances = (self.tfidf_matrix * self.tfidf_matrix.T)
+        sents_distances_matrix = sents_distances.toarray()
 
-                    if s < self.threshold: continue
-                    self.dictBiCount[i, j] = s
-        else:
-            for i in range(len(self.dictCount)):
-                for j in range(i + 1, len(self.dictCount)):
-                    s = jaccard_similarity(sentSet[i], sentSet[j])
+        for i in range(len(self.dictCount)):
+            for j in range(i + 1, len(self.dictCount)):
+                similarity = sents_distances_matrix[i, j]
 
-                    if s < self.threshold: continue
-                    self.dictBiCount[i, j] = s
+                if similarity < self.threshold: continue
+                self.dictBiCount[i, j] = similarity
 
     def build(self):
         self.graph = networkx.Graph()
@@ -107,6 +95,12 @@ def mkdir_p(path):
         else:
             raise
 
+def del_folder(path):
+    try:
+        rmtree(path)
+    except:
+        pass
+
 def saveTextFile(baseDir, media, filename, sentences):
 
     mkdir_p(os.path.join(baseDir, media))
@@ -118,6 +112,7 @@ def saveTextFile(baseDir, media, filename, sentences):
 
 if __name__ == '__main__':
 
+    del_folder(SUMMARY_PATH)
     media_list = os.listdir(PREPROCESSED_PATH)
 
     for media in media_list :
