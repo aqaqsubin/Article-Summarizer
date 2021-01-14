@@ -1,93 +1,123 @@
 import re
 import nltk
 import os
-from loadNews import mkdir_p
-from konlpy.tag import Okt
-from nltk.tokenize import sent_tokenize
+from konlpy.tag import Komoran
+from loadNews import mkdir_p, del_folder
 from nltk.tokenize import RegexpTokenizer
-from shutil import rmtree
 
 nltk.download('punkt')
 
-#BASE_DIR = "/content/gdrive/My Drive/Colab Notebooks/Text-preprocessing-Data/"
-BASE_DIR = "articles"
-ARTICLE_MEDIA_PATH = os.path.join(BASE_DIR,"Origin-Data")
-TARGET_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
-SWORDS_FILE_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
+BASE_DIR = "."
+ORIGIN_PATH = os.path.join(BASE_DIR,"Origin-Data")
+PREPROCESSED_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
+PRETTY_PATH = os.path.join(BASE_DIR,"Pretty-Data")
+SWORDS_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
 
-def readArticle(filename):
+class TextPreprocessor:
+    def __init__(self):
+        self.retokenize = RegexpTokenizer("[\w]+")
+        self.swords = []
+        self.tokenizer = {}
+        self.tagger = Komoran()
 
-    f = open(filename, 'r', encoding='utf-8')
-    title = f.readline()[:-1]
-    content = f.readline()[:-1]
-    media = f.readline()[:-1]
-    f.close()
+    def cleanContent(self, content, media):
+        rmBracket = re.sub('(\([^)]*\)|\[[^]]*\])', '', content)  # 괄호 안 내용 제거
+        rmMedia = rmBracket.replace(media, ' ')  # 언론사명 제거
+        rmReporter = re.sub('[가-힣]{2,5}\s?기자', ' ', rmMedia) # 기자 이름 제거
+        rmSpace = re.sub('\s+', ' ', rmReporter)  # 중복 공백, 탭, 개행 제거
+        rmEmail = re.sub('[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}', ' ', rmSpace) # 이메일 제거
 
-    return title, media, content
+        return rmEmail
 
-def cleanContent(content, media):
-    content = re.sub('\s+', ' ', content)  # 중복 공백, 탭, 개행 제거
-    content = re.sub(r'\([^)]*\)', '', content)  # 괄호 안 숫자 제거
-    content = content.replace(media, '')  # 언론사명 제거
+    def removeSpecialChar(self, text):
+        return ' '.join(self.retokenize.tokenize(text))
 
-    return content
+    def loadSwords(self, filename):
+        self.swords = []
+        with open(filename, 'r') as f:
+            swords = f.readlines()
+            self.swords = [tag for sword in self.swords for tag in self.tagger.pos(sword.strip()) if
+                           tag[1] in ('NNG', 'NNP', 'VV', 'VA')]
 
-def removeSpecialChar(text):
-    retokenize = RegexpTokenizer("[\w]+")
-    return ' '.join(retokenize.tokenize(text))
+        self.tokenizer = lambda sent: filter(lambda x: x not in self.swords and x[1] in ('NNG', 'NNP', 'VV', 'VA'),
+                                             self.tagger.pos(sent))
 
-def getStopWord(swords_filename):
-    swords = []
-    with open(swords_filename, 'r') as f:
-        swords = f.readlines()
-        swords = [sword.strip() for sword in swords]
+        return self.swords
 
-    return swords
+    def removeSwords(self, text):
+        return ' '.join([noun for (noun, pos) in list(self.tokenizer(text))])
 
-def delStopWord(sentence):
-    if sentence is '':
-        return None
+class Article:
+    def __init__(self, articleInfo):
+        self.title = articleInfo[0]
+        self.media = articleInfo[1]
+        self.content = articleInfo[2:]
 
-    okt = Okt()
-    swords = getStopWord(SWORDS_FILE_PATH)
-    return ' '.join([word for word in okt.morphs(sentence) if word not in swords])
+    def readContent(self):
+        for line in self.content:
+            if line is '': continue
+            yield line
 
-def getRmSwordSentences(sentences):
-    rmSwordSentences = []
-    for sentence in sentences:
-        sentence = delStopWord(sentence)
-        if sentence is not None : rmSwordSentences.append(sentence)
 
-    return rmSwordSentences
+class ArticleReader:
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.rgxSplitter = re.compile('([.!?:](?:["\']|(?![0-9])))')
 
-def savePreprocessedText(media, article, nouns):
+    def __iter__(self):
+        with open(self.filepath, encoding='utf-8') as f:
+            title = f.readline()[:-1]
+            yield title
+            content = f.readline()[:-1]
 
-    mkdir_p(os.path.join(TARGET_PATH, media))
-    save_path = os.path.join(os.path.join(TARGET_PATH, media), article)
+            media = f.readline()[:-1]
+            yield media
+
+            docs = self.rgxSplitter.split(content)
+            for s in map(lambda a, b: a + b, docs[::2], docs[1::2]):
+                if not s: continue
+                yield s
+
+def saveTextFile(baseDir, media, filename, sentences):
+
+    mkdir_p(os.path.join(baseDir, media))
+    save_path = os.path.join(os.path.join(baseDir, media), filename)
 
     with open(save_path, 'w') as f:
-        f.write(title)
-        preprocessed = ""
-        for noun in nouns:
-            preprocessed += noun + "/"
-        f.write(preprocessed)
+        f.write('/n'.join([sentence for sentence in sentences if sentence is not '']))
+
 
 
 if __name__ == '__main__':
-    media_list = os.listdir(ARTICLE_MEDIA_PATH)
+
+    del_folder(PREPROCESSED_PATH)
+    del_folder(PRETTY_PATH)
+
+    preprocessor = TextPreprocessor()
+    preprocessor.loadSwords(SWORDS_PATH)
+
+
+    media_list = os.listdir(ORIGIN_PATH)
 
     for media in media_list:
 
-        media_path = os.path.join(ARTICLE_MEDIA_PATH, media)
+        media_path = os.path.join(ORIGIN_PATH, media)
         article_list = os.listdir(media_path)
 
-        for article in article_list:
-            title, media, content = readArticle(os.path.join(media_path, article))
-            content = cleanContent(content, media)
+        for article_name in article_list:
 
-            sentences = sent_tokenize(content)
-            sentences = [removeSpecialChar(sentence) for sentence in sentences]
+            reader = ArticleReader(os.path.join(media_path, article_name))
+            article = Article(list(filter(None, reader)))
 
-            rmSwordSentences = getRmSwordSentences(sentences)
+            prettyLine = []
+            preprocessedLine = []
+            for line in article.readContent():
+                cleanLine = preprocessor.cleanContent(line, media)
+                cleanLine = preprocessor.removeSpecialChar(cleanLine)
 
-            savePreprocessedText(media, article, rmSwordSentences)
+                rmSwordLine = preprocessor.removeSwords(cleanLine)
+
+                preprocessedLine.append(rmSwordLine)
+
+            saveTextFile(PREPROCESSED_PATH, media, article_name, preprocessedLine)
+            saveTextFile(PRETTY_PATH, media, article_name, article.readContent())
