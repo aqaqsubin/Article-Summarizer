@@ -2,14 +2,15 @@
 
 import psycopg2 as pg2
 import requests
+import re
 import os
 from bs4 import BeautifulSoup, Comment
 from shutil import rmtree
 
 USER_AGENT = 'Mozilla/5.0'
-BASE_DIR = "articles"
-CONTENT_DIR = os.path.join(BASE_DIR, "Origin-Data")
-NAVER_NEWS_BASE_URL = "news.naver.com"
+BASE_DIR = "./articles"
+ORIGIN_PATH = os.path.join(BASE_DIR, 'Origin-Data')
+NAVER_NEWS_URL_REGEX = "https?://news.naver.com"
 
 def mkdir_p(path):
     import errno
@@ -56,6 +57,9 @@ def parse_article_content(article_html, tag, id):
     content = ''
 
     div = article_html.find(tag, id=id)
+    if div is None :
+        raise Exception("Page Not Found")
+
     for element in div(text=lambda text: isinstance(text, Comment)):
         element.extract()
 
@@ -69,7 +73,7 @@ def parse_article_content(article_html, tag, id):
 
 def save_article_content_txt(title, content, media):
 
-    path = os.path.join(CONTENT_DIR, media)
+    path = os.path.join(ORIGIN_PATH, media)
     mkdir_p(path)
 
     files = os.listdir(path)
@@ -89,12 +93,20 @@ def get_article_content():
         article_html = BeautifulSoup(article_page_response.text, "html.parser")
 
         url = article_html.find('meta', property='og:url')
+
+        if re.match(NAVER_NEWS_URL_REGEX, url['content']) is None: continue
         print(url['content'])
-        if NAVER_NEWS_BASE_URL in url['content'] :
+
+        try :
             content = parse_article_content(article_html, 'div', 'articleBodyContents')
             save_article_content_txt(article['title'], content, article['media'])
+        except Exception as e:
+            print(e)
+            pass
 
 if __name__ == "__main__":
-    mkdir_p(CONTENT_DIR)
+    del_folder(ORIGIN_PATH)
+    mkdir_p(ORIGIN_PATH)
+
     get_article_content()
 
