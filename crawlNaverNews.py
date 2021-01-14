@@ -97,9 +97,6 @@ def get_article_list():
     ds = datetime.now()
     de = datetime.now()
 
-    ds += timedelta(days=-86)
-    de += timedelta(days=-86)
-
     while True:
         search_page_list = get_search_page_list(ds, de)
         for page_no, page_url in enumerate(search_page_list):
