@@ -1,22 +1,100 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.preprocessing import normalize
-import numpy as np
-import os
+from sklearn.metrics.pairwise import cosine_similarity
+from konlpy.tag import Komoran
+import networkx
 import re
-import nltk
 import os
-from konlpy.tag import Okt
-from nltk.tokenize import sent_tokenize
-from nltk.tokenize import RegexpTokenizer
-from shutil import rmtree
+import math
 
-nltk.download('punkt')
+BASE_DIR = "../crawlNews/articles"
+PREPROCESSED_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
+PRETTY_PATH = os.path.join(BASE_DIR,"Pretty-Data")
+ORIGIN_PATH = os.path.join(BASE_DIR,"Origin-Data")
+SUMMARY_PATH = os.path.join(BASE_DIR,"Summary-Data")
+SWORDS_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
 
-BASE_DIR = "articles"
-ARTICLE_MEDIA_PATH = os.path.join(BASE_DIR,"Origin-Data")
-TARGET_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
-SWORDS_FILE_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
+
+class RawTextReader:
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.rgxSplitter = re.compile("/n")
+
+    def __iter__(self):
+        for line in open(self.filepath, encoding='utf-8'):
+            ch = self.rgxSplitter.split(line)
+            for s in ch:
+                yield s
+
+
+class Document:
+    def __init__(self, originSentenceIter, procSentenceIter):
+        self.originSents = list(filter(None, originSentenceIter))
+        self.procSents = list(filter(None, procSentenceIter))
+
+    def getOriginSet(self):
+        return self.originSents
+
+    def getSentsZip(self):
+        return zip(self.originSents, self.procSents)
+
+
+class TextRank:
+    def __init__(self, **kargs):
+        self.graph = None
+        self.coef = kargs.get('coef', 1.0)
+        self.threshold = kargs.get('threshold', 0.005)
+        self.dictCount = {}
+        self.dictBiCount = {}
+
+        self.tfidf_vectorizer = TfidfVectorizer()
+        self.tfidf_matrix = {}
+
+    def loadSents(self, document, tokenizer, similarity='jaccard'):
+        def jaccard_similarity(a, b):
+            n = len(a.intersection(b))
+            return n / float(len(a) + len(b) - n) / (math.log(len(a) + 1) * math.log(len(b) + 1))
+
+        def tfidf_cosine_similarity(i, j):
+            return cosine_similarity(self.tfidf_matrix[i - 1:i], self.tfidf_matrix[j - 1:j])[0, 0]
+
+        sentSet = []
+        for origin, proc in document.getSentsZip():
+            tagged = set(filter(None, tokenizer(proc)))
+            print(tagged)
+            if len(tagged) < 2: continue
+            self.dictCount[len(self.dictCount)] = origin
+            sentSet.append(tagged)
+
+        self.tfidf_matrix = self.tfidf_vectorizer.fit_transform(document.getOriginSet())
+
+        if similarity is not 'jaccard':
+            for i in range(1, len(self.dictCount)):
+                for j in range(i + 1, len(self.dictCount)):
+                    s = tfidf_cosine_similarity(i, j)
+
+                    if s < self.threshold: continue
+                    self.dictBiCount[i, j] = s
+        else:
+            for i in range(len(self.dictCount)):
+                for j in range(i + 1, len(self.dictCount)):
+                    s = jaccard_similarity(sentSet[i], sentSet[j])
+
+                    if s < self.threshold: continue
+                    self.dictBiCount[i, j] = s
+
+    def build(self):
+        self.graph = networkx.Graph()
+        self.graph.add_nodes_from(self.dictCount.keys())
+        for (a, b), n in self.dictBiCount.items():
+            self.graph.add_edge(a, b, weight=n * self.coef + (1 - self.coef))
+
+    def rank(self):
+        return networkx.pagerank(self.graph, weight='weight')
+
+    def summarize(self, ratio=0.333):
+        r = self.rank()
+        ks = sorted(r, key=r.get, reverse=True)[:int(len(r) * ratio)]
+        return ' '.join(map(lambda k: self.dictCount[k], sorted(ks)))
 
 
 def mkdir_p(path):
@@ -29,140 +107,47 @@ def mkdir_p(path):
         else:
             raise
 
+def saveTextFile(baseDir, media, filename, sentences):
 
-def del_folder(path):
-    try:
-        rmtree(path)
-    except:
-        pass
+    mkdir_p(os.path.join(baseDir, media))
+    save_path = os.path.join(os.path.join(baseDir, media), filename)
 
-
-def text2Sentences(text):
-    return text.split('/')
-
-
-def sentences2Text(sentences):
-    return '/'.join([sentence for sentence in sentences])
-
-
-def readArticle(filename):
-    f = open(filename, 'r', encoding='utf-8')
-    # title = f.readline()
-    text = f.readline()
-    f.close()
-
-    return text
-
-
-def getStopWord(swords_filename):
-    swords = []
-    with open(swords_filename, 'r') as f:
-        swords = f.readlines()
-        swords = [sword.strip() for sword in swords]
-
-    return swords
-
-
-def getNouns(sentences):
-    okt = Okt()
-    swords = getStopWord(SWORDS_FILE_PATH)
-
-    nouns = []
-    for sentence in sentences:
-        if sentence is not '':
-            nouns.append(' '.join([noun for noun in okt.morphs(sentence) if noun not in swords and len(noun) > 1]))
-
-    return nouns
-
-
-class GraphMatrix(object):
-    def __init__(self):
-        self.tfidf = TfidfVectorizer()
-        self.cnt_vec = CountVectorizer()
-        self.graph_sentence = []
-
-    def build_sent_graph(self, sentences):
-        tfidf_mat = self.tfidf.fit_transform(sentences).toarray()
-        self.graph_sentence = np.dot(tfidf_mat, tfidf_mat.T)
-        return self.graph_sentence
-
-    def build_words_graph(self, sentence):
-        cnt_vec_mat = normalize(self.cnt_vec.fit_transform(sentence).toarray().astype(float), axis=0)
-
-        vocab = self.cnt_vec.vocabulary_
-        return np.dot(cnt_vec_mat.T, cnt_vec_mat), {vocab[word]: word for word in vocab}
-
-
-class Rank(object):
-    def get_ranks(self, graph, d=0.85):
-        A = graph
-        matrix_size = A.shape[0]
-        for id in range(matrix_size):
-            A[id, id] = 0
-            link_sum = np.sum(A[:, id])
-            if link_sum != 0:
-                A[:, id] /= link_sum
-            A[:, id] *= -d
-            A[id, id] = 1
-        B = (1 - d) * np.ones((matrix_size, 1))
-        ranks = np.linalg.solve(A, B)
-        return {idx: r[0] for idx, r in enumerate(ranks)}
-
-
-class TextRank(object):
-    def __init__(self, text):
-        self.sentences = text2Sentences(text)
-        self.nouns = getNouns(self.sentences)
-
-        self.graph_matrix = GraphMatrix()
-        self.sent_graph = self.graph_matrix.build_sent_graph(self.nouns)
-        self.words_graph, self.idx2word = self.graph_matrix.build_words_graph(self.nouns)
-
-        self.rank = Rank()
-        self.sent_rank_idx = self.rank.get_ranks(self.sent_graph)
-        self.sorted_sent_rank_idx = sorted(self.sent_rank_idx, key=lambda k: self.sent_rank_idx[k], reverse=True)
-
-        self.word_rank_idx = self.rank.get_ranks(self.words_graph)
-        self.sorted_word_rank_idx = sorted(self.word_rank_idx, key=lambda k: self.word_rank_idx)
-
-    def summarize(self, sent_num=3):
-        summary = []
-        index = []
-        for idx in self.sorted_sent_rank_idx[:sent_num]:
-            index.append(idx)
-        index.sort()
-
-        for idx in index:
-            summary.append(self.sentences[idx])
-
-        return summary
-
-    def keywords(self, word_num=10):
-        rank = Rank()
-        rank_idx = rank.get_ranks(self.words_graph)
-
-        sorted_rank_idx = sorted(rank_idx, key=lambda k: rank_idx[k], reverse=True)
-
-        keywords = []
-        index = []
-        for idx in sorted_rank_idx[:word_num]:
-            index.append(idx)
-
-        for idx in index:
-            keywords.append(self.idx2word[idx])
-        return keywords
+    with open(save_path, 'w') as f:
+        f.write('/n'.join([sentence for sentence in sentences if sentence is not '']))
 
 
 if __name__ == '__main__':
 
-    media_list = os.listdir(TARGET_PATH)
-    media_path = os.path.join(TARGET_PATH, media_list[0])
+    media_list = os.listdir(PREPROCESSED_PATH)
 
-    document = os.listdir(media_path)[0]
-    text = readArticle(os.path.join(media_path, document))
+    for media in media_list :
 
-    print(text)
+        origin_article_list = os.listdir(os.path.join(PRETTY_PATH, media))
+        proc_article_list = os.listdir(os.path.join(PREPROCESSED_PATH, media))
 
-    textrank = TextRank(text)
-    for row in textrank.summarize(3):
-        print(row + '\n')
+        for article in origin_article_list :
+
+            origin_article_path = os.path.join(os.path.join(PRETTY_PATH, media), article)
+            proc_article_path = os.path.join(os.path.join(PREPROCESSED_PATH, media), article)
+
+            tr = TextRank()
+
+            tagger = Komoran()
+            tr.loadSents(Document(RawTextReader(origin_article_path), RawTextReader(proc_article_path)),
+                         lambda sent: filter(lambda x: x[1] in ('NNG', 'NNP', 'VV', 'VA'),
+                                             tagger.pos(sent)))
+            tr.build()
+
+            ranks = tr.rank()
+            for k in sorted(ranks, key=ranks.get, reverse=True)[:100]:
+                print("\t".join([str(k), str(ranks[k]), str(tr.dictCount[k])]))
+
+            summary = tr.summarize(0.2)
+            print(summary)
+
+            saveTextFile(SUMMARY_PATH, media, article, summary)
+
+
+
+
+
