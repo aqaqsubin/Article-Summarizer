@@ -12,6 +12,67 @@ BASE_DIR = "./articles"
 ORIGIN_PATH = os.path.join(BASE_DIR, 'Origin-Data')
 NAVER_NEWS_URL_REGEX = "https?://news.naver.com"
 
+
+class Article:
+    def __init__(self, title, media, url):
+        self.title = title
+        self.media = media
+        self.url = url
+        self.content = ''
+
+    def setContent(self, content):
+        self.content = content
+
+    def saveArticle(self, baseDir):
+        path = os.path.join(baseDir, self.media)
+        mkdir_p(path)
+
+        files = os.listdir(path)
+
+        f = open(os.path.join(path, str(len(files)) + ".txt"), 'w', -1, "utf-8")
+        f.write(self.title + '\n')
+        f.write(self.content + '\n')
+        f.write(self.media + '\n')
+        f.close()
+
+class ArticleHtmlParser:
+
+    def __init__(self, url, userAgent):
+        article_page_response = requests.get(url, headers={'User-Agent': userAgent})
+        self.article_html = BeautifulSoup(article_page_response.text, "html.parser")
+        self.redirectedUrl = self.article_html.find('meta', property='og:url')
+
+    def checkUrlValid(self, regEx):
+        try:
+            return re.match(regEx, self.redirectedUrl['content']) is not None
+        except Exception:
+            return False
+
+    def getUrl(self):
+        return self.redirectedUrl['content']
+
+    def get_text_without_children(self, tag):
+        return ''.join(tag.find_all(text=True, recursive=False)).strip()
+
+    def getArticleContent(self, tag, id):
+        content = ''
+
+        div = self.article_html.find(tag, id=id)
+        if div is None:
+            raise Exception("Page Not Found")
+
+        for element in div(text=lambda text: isinstance(text, Comment)):
+            element.extract()
+
+        divs = self.article_html.find_all(tag, {"id": id})
+
+        for i in divs:
+            content += self.get_text_without_children(i)
+
+        return content
+
+
+
 def mkdir_p(path):
     import errno
     try:
@@ -39,7 +100,7 @@ def get_article_list_fromDB():
         cur.execute("SELECT title, url, media FROM news_list;")
         rows = cur.fetchall()
         for row in rows:
-            article_list.append(dict(title=row[0], url=row[1], media=row[2]))
+            article_list.append(Article(title=row[0], url=row[1], media=row[2]))
 
     except (Exception, pg2.DatabaseError) as error:
         print(error)
@@ -49,64 +110,34 @@ def get_article_list_fromDB():
     return article_list
 
 
-def get_text_without_children(tag):
-    return ''.join(tag.find_all(text=True, recursive=False)).strip()
-
-
-def parse_article_content(article_html, tag, id):
-    content = ''
-
-    div = article_html.find(tag, id=id)
-    if div is None :
-        raise Exception("Page Not Found")
-
-    for element in div(text=lambda text: isinstance(text, Comment)):
-        element.extract()
-
-    divs = article_html.find_all(tag, {"id": id})
-
-    for i in divs:
-        content += get_text_without_children(i)
-
-    return content
-
-
-def save_article_content_txt(title, content, media):
-
-    path = os.path.join(ORIGIN_PATH, media)
-    mkdir_p(path)
-
-    files = os.listdir(path)
-
-    f = open(os.path.join(path, str(len(files)) + ".txt"), 'w', -1, "utf-8")
-    f.write(title)
-    f.write(content)
-    f.write(media)
-    f.close()
-
-
-def get_article_content():
-    article_list = get_article_list_fromDB()
-
-    for article_no, article in enumerate(article_list):
-        article_page_response = requests.get(article['url'], headers={'User-Agent': USER_AGENT})
-        article_html = BeautifulSoup(article_page_response.text, "html.parser")
-
-        url = article_html.find('meta', property='og:url')
-
-        if re.match(NAVER_NEWS_URL_REGEX, url['content']) is None: continue
-        print(url['content'])
-
-        try :
-            content = parse_article_content(article_html, 'div', 'articleBodyContents')
-            save_article_content_txt(article['title'], content, article['media'])
-        except Exception as e:
-            print(e)
-            pass
-
 if __name__ == "__main__":
     del_folder(ORIGIN_PATH)
     mkdir_p(ORIGIN_PATH)
 
-    get_article_content()
+    article_list = get_article_list_fromDB()
+
+    for article_no, article in enumerate(article_list):
+
+        articleParser = ArticleHtmlParser(article.url, USER_AGENT)
+
+        if not articleParser.checkUrlValid(NAVER_NEWS_URL_REGEX): continue
+        print(articleParser.getUrl())
+
+        try:
+            content = articleParser.getArticleContent('div', 'articleBodyContents')
+            article.setContent(content)
+            article.saveArticle(ORIGIN_PATH)
+
+        except Exception as e:
+            print(e)
+            pass
+
+    media_list = os.listdir(ORIGIN_PATH)
+    print("Media count {count}".format(count=len(media_list)))
+
+    from functools import reduce
+    print("Total Article Count {c}".format(c=reduce(lambda a,b : a+b,
+                                                    [len(os.listdir(os.path.join(ORIGIN_PATH, media))) for media in media_list])))
+
+
 
