@@ -51,17 +51,20 @@ def get_search_page_list(ds, de):
 def parse_article_info(article):
     title = article.select_one("a.news_tit")["title"]
 
-    divs = article.find_all('a', {"class": "info press"})
     try:
+        divs = article.find_all('a', {"class": "info press"})
         media = get_text_without_children(divs[0])
+        src_addr = article.select_one("div.news_info > div.info_group > a:last-of-type")["href"]
     except Exception as e :
-        raise("Error Appeared : ", e)
-    src_addr = article.select_one("div.news_info > div.info_group > a:last-of-type")["href"]
+        media = ''
+        src_addr = ''
+        pass
 
     return title, media, src_addr
 
 
 def insert_to_db():
+
     try:
         os.system("set PGPASSWORD=123")
         os.system("psql -U subinkim newsdb < " + SQL_FILE_PATH)
@@ -94,6 +97,9 @@ def get_article_list():
     ds = datetime.now()
     de = datetime.now()
 
+    ds += timedelta(days=-86)
+    de += timedelta(days=-86)
+
     while True:
         search_page_list = get_search_page_list(ds, de)
         for page_no, page_url in enumerate(search_page_list):
@@ -106,6 +112,7 @@ def get_article_list():
             for idx, article_area in enumerate(article_area_list):
                 article = article_area_list[idx].select_one("div.news_wrap.api_ani_send > div.news_area")
                 title, media, src_addr = parse_article_info(article)
+
 
                 article_info = {'title': convert_txt(title),
                                 'media': convert_txt(media),
