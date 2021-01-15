@@ -7,11 +7,11 @@ from nltk.tokenize import RegexpTokenizer
 
 nltk.download('punkt')
 
-BASE_DIR = "."
+BASE_DIR = "articles"
 ORIGIN_PATH = os.path.join(BASE_DIR,"Origin-Data")
 PREPROCESSED_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
 PRETTY_PATH = os.path.join(BASE_DIR,"Pretty-Data")
-SWORDS_PATH = os.path.join(BASE_DIR, "StopWordList.txt")
+SWORDS_PATH = os.path.join(BASE_DIR,"StopWordList.txt")
 
 class TextPreprocessor:
     def __init__(self):
