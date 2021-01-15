@@ -6,7 +6,7 @@ from shutil import rmtree
 import os
 import math
 
-BASE_DIR = "../crawlNews/articles"
+BASE_DIR = "articles"
 PREPROCESSED_PATH = os.path.join(BASE_DIR,"Preprocessed-Data")
 PRETTY_PATH = os.path.join(BASE_DIR,"Pretty-Data")
 ORIGIN_PATH = os.path.join(BASE_DIR,"Origin-Data")

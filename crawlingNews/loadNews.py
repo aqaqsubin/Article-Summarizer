@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup, Comment
 from shutil import rmtree
 
 USER_AGENT = 'Mozilla/5.0'
-BASE_DIR = "./articles"
+BASE_DIR = "../articles"
 ORIGIN_PATH = os.path.join(BASE_DIR, 'Origin-Data')
 NAVER_NEWS_URL_REGEX = "https?://news.naver.com"
 
