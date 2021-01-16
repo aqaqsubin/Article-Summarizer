@@ -20,32 +20,25 @@ class TextPreprocessor:
         self.tokenizer = {}
         self.tagger = Komoran()
 
-    def cleanContent(self, content, media):
-        rmBracket = re.sub('(\([^)]*\)|\[[^]]*\])', '', content)  # 괄호 안 내용 제거
-        rmMedia = rmBracket.replace(media, ' ')  # 언론사명 제거
-        rmReporter = re.sub('[가-힣]{2,5}\s?기자', ' ', rmMedia) # 기자 이름 제거
-        rmSpace = re.sub('\s+', ' ', rmReporter)  # 중복 공백, 탭, 개행 제거
-        rmEmail = re.sub('[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}', ' ', rmSpace) # 이메일 제거
-
-        return rmEmail
-
+    def removeDuplicateSpace(self, text):
+        return re.sub('\s+', ' ', text)  # 중복 공백, 탭, 개행 제거
+    
     def removeSpecialChar(self, text):
         return ' '.join(self.retokenize.tokenize(text))
+
 
     def loadSwords(self, filename):
         self.swords = []
         with open(filename, 'r') as f:
             swords = f.readlines()
-            self.swords = [tag for sword in self.swords for tag in self.tagger.pos(sword.strip()) if
-                           tag[1] in ('NNG', 'NNP', 'VV', 'VA')]
+            self.swords = [tag for sword in self.swords for tag in self.tagger.pos(sword.strip()) if tag[1] in ('NNG', 'NNP', 'VV', 'VA')]
 
-        self.tokenizer = lambda sent: filter(lambda x: x not in self.swords and x[1] in ('NNG', 'NNP', 'VV', 'VA'),
-                                             self.tagger.pos(sent))
+        self.tokenizer = lambda sent: filter(lambda x:x not in self.swords and x[1] in ('NNG', 'NNP', 'VV', 'VA'), self.tagger.pos(sent))
 
         return self.swords
-
+        
     def removeSwords(self, text):
-        return ' '.join([noun for (noun, pos) in list(self.tokenizer(text))])
+        return ' '.join([noun for (noun, pos) in list(self.tokenizer(text))]) 
 
 class Article:
     def __init__(self, articleInfo):
@@ -63,27 +56,38 @@ class ArticleReader:
     def __init__(self, filepath):
         self.filepath = filepath
         self.rgxSplitter = re.compile('([.!?:](?:["\']|(?![0-9])))')
+        self.content = ''
 
     def __iter__(self):
-        with open(self.filepath, encoding='utf-8') as f:
+        with open(self.filepath, 'r', encoding='utf-8') as f:
             title = f.readline()[:-1]
             yield title
-            content = f.readline()[:-1]
+            self.content = f.readline()[:-1]
 
             media = f.readline()[:-1]
             yield media
 
-            docs = self.rgxSplitter.split(content)
+            self.del_personal_info(media)
+            docs = self.rgxSplitter.split(self.content)
             for s in map(lambda a, b: a + b, docs[::2], docs[1::2]):
                 if not s: continue
                 yield s
+
+    def del_personal_info(self, media):
+        rmBracket = re.sub('(\([^)]*\)|\[[^]]*\])', '', self.content)  # 괄호 안 내용 제거
+        rmMedia = re.sub(media, ' ', rmBracket)  # 언론사명 제거
+        rmReporter = re.sub('[가-힣]{2,5}\s?기자', ' ', rmMedia) # 기자 이름 제거
+        rmEmail = re.sub('[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}', ' ', rmReporter) # 이메일 제거
+
+        self.content = rmEmail
+
 
 def saveTextFile(baseDir, media, filename, sentences):
 
     mkdir_p(os.path.join(baseDir, media))
     save_path = os.path.join(os.path.join(baseDir, media), filename)
 
-    with open(save_path, 'w') as f:
+    with open(save_path, 'w', encoding='utf-8') as f:
         f.write('/n'.join([sentence for sentence in sentences if sentence is not '']))
 
 
@@ -112,7 +116,7 @@ if __name__ == '__main__':
             prettyLine = []
             preprocessedLine = []
             for line in article.readContent():
-                cleanLine = preprocessor.cleanContent(line, media)
+                cleanLine = preprocessor.removeDuplicateSpace(line)
                 cleanLine = preprocessor.removeSpecialChar(cleanLine)
 
                 rmSwordLine = preprocessor.removeSwords(cleanLine)
