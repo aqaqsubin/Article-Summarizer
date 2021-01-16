@@ -136,5 +136,6 @@ y-hat과 주변 단어의 실제 y 벡터값의 차이는 아래와 같다.
 
 학습이 완료된 가중치 행렬을 통해 임베딩 벡터를 구한다.
 
+- [Gensim을 이용한 Word2Vec 모델 구축](./articleSummary-Jupyter/Word2vec.ipynb)
 
 
