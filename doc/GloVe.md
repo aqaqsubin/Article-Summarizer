@@ -138,3 +138,5 @@ Xik의 값이 작으면 함수의 값도 작도, 값이 크면 함수의 값도 
 <img src="./images/glove/final_glove_loss_function.jpeg" width=550/><br>
 </div>
 <br>
+
+- [GloVe 패키지를 이용한 GloVe 모델 구축](../articleSummary-Jupyter/GloVe.ipynb)
