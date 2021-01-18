@@ -20,7 +20,7 @@ Skip-Gram에 비해 몇 배 빠른 훈련이 가능하며, 빈번한 단어를 �
 
 <br>  
 <div align=left>
-<img src="./images/cbow_sliding_window.jpeg" width=450/><br>
+<img src="./images/word2vec/cbow/cbow_sliding_window.jpeg" width=450/><br>
 윈도우 크기가 3일 경우의 sliding window 적용
 </div>
 <br>
@@ -30,7 +30,7 @@ Word2Vec은 입력층과 출력층 사이에 하나의 은닉층이 존재하며
 
 <br>  
 <div align=left>
-<img src="./images/cbow.jpeg" width=600/><br>
+<img src="./images/word2vec/cbow/cbow.jpeg" width=600/><br>
 이때 M은 투사층의 크기이며, CBOW를 수행한 후 얻게될 임베딩 벡터의 차원은 5가 된다.
 </div>
 <br>
@@ -40,7 +40,7 @@ Word2Vec은 입력층과 출력층 사이에 하나의 은닉층이 존재하며
 
 <br>  
 <div align=left>
-<img src="./images/embedding_vector.jpeg" width=400/><br>
+<img src="./images/word2vec/cbow/embedding_vector.jpeg" width=400/><br>
 단어 earth의 임베딩 벡터 
 </div>
 <br>
@@ -52,7 +52,7 @@ i 번째 인덱스에 1 값을 가지는 단어는 W 행렬에서 i 번째 행�
 
 <br>  
 <div align=left>
-<img src="./images/mean_vector.jpeg" width=450/><br>
+<img src="./images/word2vec/cbow/mean_vector.jpeg" width=450/><br>
 단어 earth, is, an, place, live의 평균 벡터
 </div>
 <br>
@@ -63,8 +63,8 @@ i 번째 인덱스에 1 값을 가지는 단어는 W 행렬에서 i 번째 행�
 - *스코어 벡터(score vector) 구하기*
 <br>  
 <div align=left>
-<img src="./images/score_vector_1.jpeg" width=300/><br>
-<img src="./images/score_vector_2.jpeg" width=270/><br>
+<img src="./images/word2vec/cbow/score_vector_1.jpeg" width=300/><br>
+<img src="./images/word2vec/cbow/score_vector_2.jpeg" width=270/><br>
 softmax 함수의 출력값은 0과 1사이의 실수이며, 각 원소의 총합은 1이다.
 </div>
 <br>
@@ -75,7 +75,7 @@ softmax 함수의 출력값은 0과 1사이의 실수이며, 각 원소의 총�
 
 <br>  
 <div align=left>
-<img src="./images/loss.jpeg" width=200/>&nbsp;&nbsp;&nbsp;&nbsp;<img src="./images/cross_entropy.jpeg" width=400/><br>
+<img src="./images/word2vec/cbow/loss.jpeg" width=200/>&nbsp;&nbsp;&nbsp;&nbsp;<img src="./images/word2vec/cbow/cross_entropy.jpeg" width=400/><br>
 cross entropy 식, 이 값이 최소화되도록 학습해야 한다.
 </div>
 <br>
@@ -96,7 +96,7 @@ Skip Gram의 인공 신경망은 다음과 같이 표현된다.
 
 <br>  
 <div align=left>
-<img src="./images/skip_gram.jpeg" width=600/><br>
+<img src="./images/word2vec/skipgram/skip_gram.jpeg" width=600/><br>
 N은 투사층의 크기이며, Skip Gram을 수행한 후 얻게될 임베딩 벡터의 차원이다.
 </div>
 <br>
@@ -107,7 +107,7 @@ N은 투사층의 크기이며, Skip Gram을 수행한 후 얻게될 임베딩 �
 
 <br>  
 <div align=left>
-<img src="./images/skip_gram_embedding_vector.jpeg" width=400/><br>
+<img src="./images/word2vec/skipgram/skip_gram_embedding_vector.jpeg" width=400/><br>
 중심 단어 great의 임베딩 벡터 
 </div>
 <br>
@@ -117,8 +117,8 @@ N은 투사층의 크기이며, Skip Gram을 수행한 후 얻게될 임베딩 �
 - *스코어 벡터(score vector) 구하기*
 <br>  
 <div align=left>
-<img src="./images/skip_gram_score_vector_1.jpeg" width=300/><br>
-<img src="./images/skip_gram_score_vector.jpeg" width=270/><br>
+<img src="./images/word2vec/skipgram/kip_gram_score_vector_1.jpeg" width=300/><br>
+<img src="./images/word2vec/skipgram/skip_gram_score_vector.jpeg" width=270/><br>
 softmax 함수의 출력값은 0과 1사이의 실수이며, 각 원소의 총합은 1이다.
 </div>
 <br>
@@ -130,7 +130,7 @@ y-hat과 주변 단어의 실제 y 벡터값의 차이는 아래와 같다.
 
 <br>  
 <div align=left>
-<img src="./images/skip_gram_loss.jpeg" width=650/><br>
+<img src="./images/word2vec/skipgram/skip_gram_loss.jpeg" width=650/><br>
 </div>
 <br>
 
