@@ -68,6 +68,24 @@ Q는 Query, K는 Key, V는 Value를 의미한다.
 </div>
 <br>
 
+Q, K, V는 어떤 시점에 셀에서의 은닉 상태를 의미한다.  
+인코더의 Self Attention은 모든 입력의 출처가 인코더이며, Q,K,V가 의미하는 바는 그림과 같다.
+ 
+<div align=left>
+<img src="./images/transformer/encoder_self_attention.jpeg" width=400/><br>
+인코더의 Self-Attention. Q, K, V는 인코더 입력 문장의 모든 단어 벡터들을 의미한다.
+</div>
+<br> 
+
+*'The animal didn't cross the street because it was too tired.'* 라는 문장을 토큰화하여 임베딩한 값을 입력으로 주었다고 가정해보자.  
+이때 *it*이 의미하는 바는 입력 문장 내의 단어들끼리 유사도를 구해 추측할 수 있다.  
+
+<br>  
+
+> 디코더의 Masked Self Attention은 모든 입력의 출처가 디코더 입력이며, Encoder-Decoder Attention은 Q의 출처는 디코더의 첫번째 sub-layer의 결과 행렬이고, K, V의 출처는 인코더의 결과 행렬이다.  
+
+<br>  
+
 Attention 함수는 Query와 Key-Value 쌍을 출력에 매핑하는 역할을 한다.  
 출력은 Q, K, V의 가중치 합에 의해 결정되며, 주어진 Query와 Key의 호환성 함수에 의해 가중치 값이 계산된다.  
 <br>
@@ -200,7 +218,7 @@ gamma와 beta는 학습이 가능한 파라미터이다.
 
 인코더를 하나의 Layer로 보았을 때, 인코더는 2개의 sub-layer로 이루어져 있다. 
 
-- Multi-Head Self-Attention mechanism 
+- Multi-Head Self-Attention mechanism   
 - Position-wise Feed Forward Network  
 
 
