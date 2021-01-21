@@ -187,7 +187,7 @@ Transformer의 모든 입력과 출력은 d_model 차원으로 동일하기 때�
 </div>
 <br>
 
-- **Layer Normalization**
+- **Layer Normalization**  
 Residual Connection의 결과에 이어 Layer Normalization 과정을 거치며, 이는 학습에 도움이 된다.    
 입력 x 행렬에 대해 Layer Normalization 수행 결과 행렬을 LN이라고 했을 때, 벡터 x_i에 대한 Normalization 결과는 ln_i로 나타낼 수 있다.   
 <br>  
