@@ -226,7 +226,23 @@ gamma와 beta는 학습이 가능한 파라미터이다.
 
 디코더를 하나의 Layer로 볼 때, 디코더는 3개의 sub-layer로 이루어져 있다.
 
-- Masked Multi-Head Self-Attention mechanism
+- Masked Multi-Head Self-Attention mechanism  <br>  
+RNN은 입력을 순차적을 받기 때문에, 현재 시점의 단어를 예측할 때 이전에 입력되었던 단어들만 attend할 수 있다.  
+하지만, Transformer는 문장 행렬을 한번에 받기 때문에 현재 시점의 단어를 예측할 때 미래 시점의 단어들도 attend 할 수 있는 현상이 일어난다.  <br>
+<br>
+따라서 미래 시점의 단어가 attend 하지 않도록 마스크를 씌워야 한다. 이를 look-ahead mask라 한다.  
+이 Look-ahead mask는 디코더의 첫번째 sub-layer에서 이루어진다.  <br>  
+먼저 Self-Attend 연산을 통해 Attention score matrix를 구한다. (이 Self Attention 연산은 인코더의 Self-Attention과 동일하다.)  
+<br>  
+<img src="./images/transformer/decoder_self_attention.jpeg" width=300/><br>
+디코더에서 Attention Score matrix  
+<br> 
+이 후에 행렬에 현재 시점의 이전 단어들만 참고할 수 있도록 아래와 같이 마스킹을 수행한다.  
+<img src="./images/transformer/decoder_masked_self_attention.jpeg" width=300/><br> 
+<br> 
+
+
+
 - Multi-Head Attention mechanism 
 - Position-wise Feed Forward Network  
 
