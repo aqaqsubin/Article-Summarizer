@@ -54,7 +54,7 @@ def parse_article_info(article):
     try:
         divs = article.find_all('a', {"class": "info press"})
         media = get_text_without_children(divs[0])
-        src_addr = article.select_one("div.news_info > div.info_group > a:last-of-type")["href"]
+        src_addr = article.select_one("div.news_info > div.info_group > a:nth-of-type(2)")["href"]
     except Exception as e :
         media = ''
         src_addr = ''
