@@ -15,15 +15,18 @@ class Article:
         self.content = content
 
     def readContent(self):
-        self.content = del_personal_info()
+        def is_splited_sentence(sents):
+            return len(sents) > 1
+
+        self.del_personal_info()
         docs = self.rgxSplitter.split(self.content)
-            
-            if not is_splited_sentence(docs): # 본문이 1줄이며, 위 정규식에 따라 split 되지 않음
-                yield docs[0]
-            else :
-                for s in map(lambda a, b: a + b, docs[::2], docs[1::2]):
-                    if not s: continue
-                    yield s
+
+        if not is_splited_sentence(docs): # 본문이 1줄이며, 위 정규식에 따라 split 되지 않음
+            yield docs[0]
+        else :
+            for s in map(lambda a, b: a + b, docs[::2], docs[1::2]):
+                if not s: continue
+                yield s
 
     def del_personal_info(self):
         rmBracket = re.sub('(\([^)]*\)|\[[^]]*\])', '', self.content)  # 괄호 안 내용 제거

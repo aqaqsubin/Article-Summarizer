@@ -1,4 +1,5 @@
 from shutil import rmtree
+import os
 
 def mkdir_p(path):
     import errno

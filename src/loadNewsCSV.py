@@ -3,7 +3,8 @@
 import psycopg2 as pg2
 import os
 import csv
-from commom_module.articleHandler import Article, ArticleHtmlParser
+import pandas as pd
+from common_module.articleHandler import Article, ArticleHtmlParser
 from common_module.dirHandler import mkdir_p, del_folder
 from common_module.dbHandler import dbHandler
 
@@ -18,6 +19,7 @@ def get_media_list_fromDB(db):
 
     sql = "SELECT DISTINCT media FROM news_list;"
     media_list = db.query(sql)
+    media_list = [media_tuple[0] for media_tuple in media_list]
 
     return media_list
 
@@ -25,7 +27,7 @@ def get_media_list_fromDB(db):
 def get_article_list_fromDB(db, media_name):
 
     article_list = []
-    sql = "SELECT DISTINCT media FROM news_list WHERE media = '{}';".format(media_name)
+    sql = "SELECT * FROM news_list WHERE media = '{}';".format(media_name)
     rows = db.query(sql)
 
     for row in rows:
@@ -33,6 +35,9 @@ def get_article_list_fromDB(db, media_name):
 
     return article_list
 
+def saveCSVFile(baseDir, media, article_dist):
+    save_path = os.path.join(baseDir, media) + ".csv"
+    article_dist.to_csv(save_path, mode='w', header=False)
 
 if __name__ == "__main__":
     del_folder(ORIGIN_PATH)
@@ -40,13 +45,13 @@ if __name__ == "__main__":
     
     db = dbHandler(host='localhost', dbname='newsdb', user='subinkim', password='123', port='5432')
 
-    media_list = get_media_list_fromDB()
+    media_list = get_media_list_fromDB(db)
+
     for media_name in media_list :
+        print(media_name)
 
-        f = open(os.path.join(ORIGIN_PATH, media_name + ".csv"), 'w', newline="\n", encoding="utf-8")
-        wr = csv.writer(f)
-
-        article_list = get_article_list_fromDB(media_name)
+        article_list = get_article_list_fromDB(db, media_name)
+        article_dist = pd.DataFrame(columns=['Title', 'Contents'])
         for article_no, article in enumerate(article_list):
 
             articleParser = ArticleHtmlParser(article.url, USER_AGENT)
@@ -56,19 +61,19 @@ if __name__ == "__main__":
             try:
                 content = articleParser.getArticleContent('div', 'articleBodyContents')
                 article.setContent(content)
-                wr.writerow([article.title, "\t".join(list(article.readContent()))])
+                conts_list = list(article.readContent())
+
+                if not conts_list : continue
+                dist = {'Title': article.title, 'Contents': "\t".join(conts_list)}
+                article_dist = article_dist.append(dist, ignore_index=True)
 
             except Exception as e:
                 print(e)
                 pass
-        f.close()
+        saveCSVFile(ORIGIN_PATH, media_name, article_dist)
 
     media_list = os.listdir(ORIGIN_PATH)
     print("Media count {count}".format(count=len(media_list)))
-
-    from functools import reduce
-    print("Total Article Count {c}".format(c=reduce(lambda a,b : a+b,
-                                                    [len(os.listdir(os.path.join(ORIGIN_PATH, media))) for media in media_list])))
 
 
 
