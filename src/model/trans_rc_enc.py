@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from transformer import PositionalEncoding, MultiHeadAttention, CustomSchedule
-from transformer import create_padding_mask, create_look_ahead_mask
-from transformer import encoder_layer, encoder, decoder_layer
+from model.transformer import PositionalEncoding, MultiHeadAttention, CustomSchedule
+from model.transformer import create_padding_mask, create_look_ahead_mask
+from model.transformer import encoder_layer, encoder, decoder_layer
 
 
 def rc_encoder(vocab_size, d_model, hidden_size, encoder_input, global_layers=1, cell='gru', dropout=0.1):

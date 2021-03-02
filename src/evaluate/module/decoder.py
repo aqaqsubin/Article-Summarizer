@@ -1,4 +1,4 @@
 import sys
 sys.path.append("../../train")
 
-from module.decoder import Decoder
+from train.module.decoder import Decoder

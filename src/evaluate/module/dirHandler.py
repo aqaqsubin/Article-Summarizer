@@ -1,4 +1,3 @@
 import sys
-sys.path.append("../../data-preprocessing")
 
-from module.dirHandler import mkdir_p, del_folder
+from data_preprocessing.module.dirHandler import mkdir_p, del_folder

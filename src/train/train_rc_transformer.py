@@ -17,7 +17,6 @@ from module.Encoder import IntegerEncoder
 from module.Decoder import Decoder
 from sklearn.model_selection import train_test_split
 
-
 BASE_DIR = "/data/ksb"
 DATA_BASE_DIR = os.path.join(BASE_DIR, 'sample_articles')
 SRC_BASE_DIR = os.path.join(BASE_DIR, 'TestSampleDir')

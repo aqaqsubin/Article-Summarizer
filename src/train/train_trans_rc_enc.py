@@ -5,18 +5,25 @@ import numpy as np
 from pathlib import Path
 from glob import iglob
 import tensorflow as tf
-import sentencepiece as spm
+# import sentencepiece as spm
 import csv
 import pandas as pd
+import argparse
 
-sys.path.append("..")
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from model.trans_rc_enc import transformer, CustomSchedule
 from module.dirHandler import mkdir_p, del_folder
-from module.Encoder import IntegerEncoder
-from module.Decoder import Decoder
+from module.encoder import IntegerEncoder
+from module.decoder import Decoder
 from sklearn.model_selection import train_test_split
 
+parser = argparse.ArgumentParser(description="Description")
+parser.add_argument('--headline', required=True, help="If True, Generating Headline else Generating Summary")
+parser.add_argument('--n', required=True, help="Transformer + RC-Encoder (n)")
+
+args = parser.parse_args()
+print(args[0])
 
 BASE_DIR = "/data/ksb"
 DATA_BASE_DIR = os.path.join(BASE_DIR, 'sample_articles')
@@ -45,7 +52,7 @@ sp.Load(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.model').format(model_num))
 D_MODEL = 128
 VOCAB_SIZE = len(Vo)
 LAYER_NUM = 6
-RC_ENC_N = 6
+RC_ENC_N = int(args[1])
 NUM_HEADS = 8
 DFF = 512
 
@@ -82,8 +89,16 @@ if __name__ == '__main__':
         'corpus' : None,
         'spm' : sp
     }
-    input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(VAL_PREPROCESSED_PATH, '**.csv'), recursive=False))).encoder()
-    output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(VAL_SUMMARY_PREPROCESSED_PATH, '**.csv'), recursive=False))).encoder()
+
+    if args[0]:
+        src_data_path = PREPROCESSED_PATH
+        target_data_path = TITLE_PREPROCESSED_PATH
+    else :
+        src_data_path = PREPROCESSED_PATH
+        target_data_path = SUMMARY_PREPROCESSED_PATH
+
+    input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()
+    output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
 
     input_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, input_encoded_list))
     output_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, output_encoded_list))
