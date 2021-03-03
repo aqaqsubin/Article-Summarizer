@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import csv
+import argparse
 import pandas as pd
 import numpy as np
 from glob import iglob
@@ -9,14 +10,15 @@ import tensorflow as tf
 import sentencepiece as spm
 from rouge import Rouge 
 
-sys.path.append("..")
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from model.seq2seq import Encoder, Decoder
-from module.Handle_Dir import mkdir_p, del_folder
+from module.dirHandler import mkdir_p, del_folder
 from module.encoder import IntegerEncoder
 from module.decoder import Decoder as IntegerDecoder
+from module.parse import ParseBoolean
 
-BASE_DIR = "/data/ksb/TestSampleDir"
+BASE_DIR = os.getcwd()
 DATA_BASE_DIR = os.path.join(BASE_DIR, 'articles')
 
 PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Preprocessed-Data")
@@ -25,11 +27,20 @@ SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Summary-Preprocessed-Dat
 SUMMARY_PREDICT_PATH = os.path.join(DATA_BASE_DIR,"Summary-Predict-Data")
 TITLE_PREDICT_PATH = os.path.join(DATA_BASE_DIR,"Title-Predict-Data")
 
+VAL_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Preprocessed-Data")
+VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Preprocessed-Data")
+VAL_TITLE_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Title-Preprocessed-Data")
+
 SEQ2SEQ_PREDICT_PATH = os.path.join(SUMMARY_PREDICT_PATH,"Seq2Seq-Predict-Data")
 
-WORD_ENCODING_DIR = os.path.join(os.path.join(BASE_DIR, 'articleSummary-Jupyter'), 'Word-Encoding-Model')
-MODEL_DIR = os.path.join(os.path.join(BASE_DIR, 'articleSummary-Jupyter'), 'trained-model')
+WORD_ENCODING_DIR = os.path.join(BASE_DIR, 'Word-Encoding-Model')
+MODEL_DIR = os.path.join(BASE_DIR, 'trained-model')
 S2S_MODEL_DIR = os.path.join(MODEL_DIR, "seq2seq")
+
+parser = argparse.ArgumentParser(description="Description")
+parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
+
+args = parser.parse_args()
 
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
@@ -150,7 +161,6 @@ if __name__ == '__main__':
     encoder = Encoder(VOCAB_SIZE, D_MODEL, ENC_UNITS, BATCH_SIZE, cell='lstm')
     decoder = Decoder(VOCAB_SIZE, D_MODEL, DEC_UNITS, BATCH_SIZE, cell='lstm')
 
-
     ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
                            optimizer = optimizer)
@@ -163,10 +173,17 @@ if __name__ == '__main__':
     
     rouge = Rouge()
     
-    for _, val_proc_path in enumerate(iglob(os.path.join(VAL_PREPROCESSED_PATH, '**.csv'), recursive=False)):
+    if args.headline:
+        src_data_path = VAL_SUMMARY_PREPROCESSED_PATH
+        target_data_path = VAL_TITLE_PREPROCESSED_PATH
+    else :
+        src_data_path = VAL_PREPROCESSED_PATH
+        target_data_path = VAL_SUMMARY_PREPROCESSED_PATH
+
+    for _, val_proc_path in enumerate(iglob(os.path.join(src_data_path, '**.csv'), recursive=False)):
 
         media_name = get_media_name(val_proc_path)
-        val_summary_path = os.path.join(VAL_SUMMARY_PREPROCESSED_PATH, media_name +".csv")
+        val_summary_path = os.path.join(target_data_path, media_name +".csv")
         print(media_name, val_proc_path)
 
         f_src = open(val_proc_path, 'r', newline="\n", encoding="utf-8")

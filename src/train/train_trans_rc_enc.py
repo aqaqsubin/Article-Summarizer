@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 from glob import iglob
 import tensorflow as tf
-# import sentencepiece as spm
+import sentencepiece as spm
 import csv
 import pandas as pd
 import argparse
@@ -16,18 +16,18 @@ from model.trans_rc_enc import transformer, CustomSchedule
 from module.dirHandler import mkdir_p, del_folder
 from module.encoder import IntegerEncoder
 from module.decoder import Decoder
+from module.parse import ParseBoolean
 from sklearn.model_selection import train_test_split
 
 parser = argparse.ArgumentParser(description="Description")
-parser.add_argument('--headline', required=True, help="If True, Generating Headline else Generating Summary")
-parser.add_argument('--n', required=True, help="Transformer + RC-Encoder (n)")
+parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
+parser.add_argument('--n', required=True, type=int, help="Transformer + RC-Encoder (n)")
 
 args = parser.parse_args()
-print(args[0])
 
-BASE_DIR = "/data/ksb"
-DATA_BASE_DIR = os.path.join(BASE_DIR, 'sample_articles')
-SRC_BASE_DIR = os.path.join(BASE_DIR, 'TestSampleDir')
+BASE_DIR = os.getcwd()
+DATA_BASE_DIR = os.path.join(BASE_DIR, 'articles')
+SRC_BASE_DIR = os.path.join(BASE_DIR, 'src')
 
 VAL_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Preprocessed-Data")
 VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Preprocessed-Data")
@@ -38,8 +38,8 @@ SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Summary-Preprocessed-Dat
 
 TRANSFORMER_PREDICT_PATH = os.path.join(DATA_BASE_DIR,"Transformer-Predict-Data")
 
-WORD_ENCODING_DIR = os.path.join(os.path.join(SRC_BASE_DIR, 'articleSummary-Jupyter'), 'Word-Encoding-Model')
-MODEL_DIR = os.path.join(os.path.join(SRC_BASE_DIR, 'articleSummary-Jupyter'), 'trained-model')
+WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
+MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
 
 
 sp = spm.SentencePieceProcessor()
@@ -52,7 +52,7 @@ sp.Load(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.model').format(model_num))
 D_MODEL = 128
 VOCAB_SIZE = len(Vo)
 LAYER_NUM = 6
-RC_ENC_N = int(args[1])
+RC_ENC_N = int(args.n)
 NUM_HEADS = 8
 DFF = 512
 
@@ -66,7 +66,7 @@ END_TOKEN = [sp.eos_id()]
 
 get_max_length = lambda x : np.max([len(line) for line in x])
 
-MAX_LEN = get_max_length(input_encoded_list) + 2
+MAX_LEN = 300 + 2
 SUMMARY_MAX_LEN = 150 + 2
 
 def loss_function(y_true, y_pred):
@@ -90,11 +90,10 @@ if __name__ == '__main__':
         'spm' : sp
     }
 
-    if args[0]:
-        src_data_path = PREPROCESSED_PATH
+    src_data_path = PREPROCESSED_PATH
+    if args.headline:
         target_data_path = TITLE_PREPROCESSED_PATH
     else :
-        src_data_path = PREPROCESSED_PATH
         target_data_path = SUMMARY_PREPROCESSED_PATH
 
     input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()

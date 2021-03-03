@@ -8,19 +8,20 @@ import tensorflow as tf
 import sentencepiece as spm
 import csv
 import pandas as pd
+import argparse
 
-sys.path.append("..")
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from model.transformer import transformer, CustomSchedule
 from module.dirHandler import mkdir_p, del_folder
-from module.Encoder import IntegerEncoder
-from module.Decoder import Decoder
+from module.encoder import IntegerEncoder
+from module.decoder import Decoder
+from module.parse import ParseBoolean
 from sklearn.model_selection import train_test_split
 
-
-BASE_DIR = "/data/ksb"
-DATA_BASE_DIR = os.path.join(BASE_DIR, 'sample_articles')
-SRC_BASE_DIR = os.path.join(BASE_DIR, 'TestSampleDir')
+BASE_DIR = os.getcwd()
+DATA_BASE_DIR = os.path.join(BASE_DIR, 'articles')
+SRC_BASE_DIR = os.path.join(BASE_DIR, 'src')
 
 VAL_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Preprocessed-Data")
 VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Preprocessed-Data")
@@ -31,9 +32,12 @@ SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Summary-Preprocessed-Dat
 
 TRANSFORMER_PREDICT_PATH = os.path.join(DATA_BASE_DIR,"Transformer-Predict-Data")
 
-WORD_ENCODING_DIR = os.path.join(os.path.join(SRC_BASE_DIR, 'articleSummary-Jupyter'), 'Word-Encoding-Model')
-MODEL_DIR = os.path.join(os.path.join(SRC_BASE_DIR, 'articleSummary-Jupyter'), 'trained-model')
+WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
+MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
 
+parser = argparse.ArgumentParser(description="Description")
+parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
+args = parser.parse_args()
 
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
@@ -78,8 +82,15 @@ if __name__ == '__main__':
         'corpus' : None,
         'spm' : sp
     }
-    input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(VAL_PREPROCESSED_PATH, '**.csv'), recursive=False))).encoder()
-    output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(VAL_SUMMARY_PREPROCESSED_PATH, '**.csv'), recursive=False))).encoder()
+
+    src_data_path = PREPROCESSED_PATH
+    if args.headline:
+        target_data_path = TITLE_PREPROCESSED_PATH
+    else :
+        target_data_path = SUMMARY_PREPROCESSED_PATH
+
+    input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()
+    output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
     
     MAX_LEN = get_max_length(input_encoded_list) + 2
     SUMMARY_MAX_LEN = 150 + 2

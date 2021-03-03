@@ -3,6 +3,7 @@ import os
 import csv
 import sys
 import time
+import argparse
 import numpy as np
 import pandas as pd
 from glob import iglob
@@ -16,13 +17,12 @@ from model.seq2seq import Encoder, Decoder
 from module.dirHandler import mkdir_p, del_folder
 from module.encoder import IntegerEncoder
 from module.decoder import Decoder as IntegerDecoder
-
+from module.parse import ParseBoolean
 from sklearn.model_selection import train_test_split
 
-
-BASE_DIR = "/data/ksb/"
-DATA_BASE_DIR = os.path.join(BASE_DIR, 'sample_articles')
-SRC_BASE_DIR = os.path.join(BASE_DIR, 'TestSampleDir')
+BASE_DIR = os.getcwd()
+DATA_BASE_DIR = os.path.join(BASE_DIR, 'articles')
+SRC_BASE_DIR = os.path.join(BASE_DIR, 'src')
 
 TITLE_PREPROCESSED_PATH= os.path.join(DATA_BASE_DIR,"Title-Preprocessed-Data")
 PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Preprocessed-Data")
@@ -33,9 +33,14 @@ PREDICT_HEADLINE_PATH = os.path.join(DATA_BASE_DIR,"Predict-Headline-Data")
 VAL_PREPROCESSED_PATH= os.path.join(DATA_BASE_DIR,"Valid-Preprocessed-Data")
 VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Preprocessed-Data")
 
-
-WORD_ENCODING_DIR = os.path.join(os.path.join(SRC_BASE_DIR, 'articleSummary-Jupyter'), 'Word-Encoding-Model')
+WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, "trained-model")
+
+parser = argparse.ArgumentParser(description="Description")
+parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
+parser.add_argument('--n', required=True, type=int, help="Transformer + RC-Encoder (n)")
+
+args = parser.parse_args()
 
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
@@ -77,16 +82,13 @@ def train_step(inp, targ):
 
         dec_hidden = enc_hidden[0]
 
-        # print("dec_hidden shape : {}".format(dec_hidden))
 
         dec_input = tf.expand_dims(START_TOKEN * BATCH_SIZE, 1)
 
         # 교사 강요(teacher forcing) - 다음 입력으로 타겟을 피딩(feeding)합니다.
         for t in range(1, targ.shape[1]):
             # enc_output를 디코더에 전달합니다.
-            #   print("enc_output shape : {}".format(enc_output))
             predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
-            #   print("dec_hidden shape : {}".format(dec_hidden.shape))
             loss += loss_function(targ[:, t], predictions)
 
             # 교사 강요(teacher forcing)를 사용합니다.
@@ -111,8 +113,14 @@ if __name__ == '__main__':
         'corpus' : None,
         'spm' : sp
     }
-    output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(TITLE_PREPROCESSED_PATH, '**.csv'), recursive=False))).encoder()
-    input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(PREDICT_PATH, '**.csv'), recursive=False))).encoder()
+    src_data_path = PREPROCESSED_PATH
+    if args.headline:
+        target_data_path = TITLE_PREPROCESSED_PATH
+    else :
+        target_data_path = SUMMARY_PREPROCESSED_PATH
+
+    input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()
+    output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
 
     get_max_length = lambda x : np.max([len(line) for line in x])
 
