@@ -172,4 +172,4 @@ if __name__ == '__main__':
     model.compile(optimizer=optimizer, loss=loss_function)
     model.summary()
 
-    model.fit(dataset, batch_size=BATCH_SIZE, epochs=30, verbose=2, validation_data=val_dataset, shuffle=True, callbacks=[model_checkpoint_callback])
+    model.fit(dataset, epochs=30, verbose=2, validation_data=val_dataset, shuffle=True, callbacks=[model_checkpoint_callback])
