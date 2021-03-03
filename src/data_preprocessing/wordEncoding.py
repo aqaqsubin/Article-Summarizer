@@ -14,11 +14,13 @@ SRC_BASE_DIR = os.path.join(BASE_DIR, 'src')
 ORIGIN_PATH = os.path.join(DATA_BASE_DIR,"Origin-Data")
 PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Preprocessed-Data")
 TITLE_PREPROCESSED_PATH = os.path.join(BASE_DIR,"Title-Preprocessed-Data")
+SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Summary-Preprocessed-Data")
 
-PRETTY_PATH = os.path.join(DATA_BASE_DIR,"Pretty-Data")
+VALID_PATH = os.path.join(DATA_BASE_DIR,"Valid-Data")
 VAL_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Preprocessed-Data")
 VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Preprocessed-Data")
-SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Summary-Preprocessed-Data")
+VAL_TITLE_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Title-Preprocessed-Data")
+
 SWORDS_PATH = os.path.join(DATA_BASE_DIR, "StopWordList.txt")
 MODEL_DIR_PATH = os.path.join(SRC_BASE_DIR, "Word-Encoding-Model")
 
@@ -73,12 +75,13 @@ if __name__ == '__main__':
 
     file_name = os.path.join(MODEL_DIR_PATH, "SentencePiece.txt")
 
-    headline_src_text = get_text(TITLE_PREPROCESSED_PATH)
-    headline_tar_text = get_text(VAL_PREPROCESSED_PATH) # 원래 Generated Summary 
+    headline_tar_text = get_text(VAL_TITLE_PREPROCESSED_PATH)
+    headline_src_text = get_text(VAL_PREPROCESSED_PATH)
+    tar_text = get_text(TITLE_PREPROCESSED_PATH)
     src_text = get_text(PREPROCESSED_PATH)
 
     with open(file_name, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(headline_src_text + headline_tar_text + src_text))
+        f.write('\n'.join(headline_src_text + headline_tar_text + src_text + tar_text))
 
     model_num = len(list(iglob(os.path.join(MODEL_DIR_PATH, 'spm-input-*.vocab'), recursive=False)))
     prefix = os.path.join(MODEL_DIR_PATH, 'spm-input-{}'.format(model_num))
