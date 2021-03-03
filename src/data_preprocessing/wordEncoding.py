@@ -7,8 +7,9 @@ import numpy as np
 import sentencepiece as spm
 from module.dirHandler import mkdir_p, del_folder
 
-BASE_DIR = "/data/ksb/"
-DATA_BASE_DIR = os.path.join(BASE_DIR, "sample_articles")
+BASE_DIR = os.getcwd()
+DATA_BASE_DIR = os.path.join(BASE_DIR, 'articles')
+SRC_BASE_DIR = os.path.join(BASE_DIR, 'src')
 
 ORIGIN_PATH = os.path.join(DATA_BASE_DIR,"Origin-Data")
 PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Preprocessed-Data")
@@ -19,10 +20,10 @@ VAL_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Preprocessed-Data")
 VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Preprocessed-Data")
 SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Summary-Preprocessed-Data")
 SWORDS_PATH = os.path.join(DATA_BASE_DIR, "StopWordList.txt")
-MODEL_DIR_PATH = "Word-Encoding-Model"
+MODEL_DIR_PATH = os.path.join(SRC_BASE_DIR, "Word-Encoding-Model")
 
 PAD_ID=0  
-VACAB_SIZE = 80000 
+VOCAB_SIZE = 80000 
 SOS_ID=1
 EOS_ID=2
 UNK_ID=3
@@ -70,7 +71,7 @@ if __name__ == '__main__':
 
     mkdir_p(MODEL_DIR_PATH)
 
-    file_name = os.path.join(MODEL_PATH, "SentencePiece.txt")
+    file_name = os.path.join(MODEL_DIR_PATH, "SentencePiece.txt")
 
     headline_src_text = get_text(TITLE_PREPROCESSED_PATH)
     headline_tar_text = get_text(VAL_PREPROCESSED_PATH) # 원래 Generated Summary 
@@ -79,8 +80,8 @@ if __name__ == '__main__':
     with open(file_name, 'w', encoding='utf-8') as f:
         f.write('\n'.join(headline_src_text + headline_tar_text + src_text))
 
-    model_num = len(list(iglob(os.path.join(MODEL_PATH, 'spm-input-*.vocab'), recursive=False)))
-    prefix = os.path.join(MODEL_PATH, 'spm-input-{}'.format(model_num))
+    model_num = len(list(iglob(os.path.join(MODEL_DIR_PATH, 'spm-input-*.vocab'), recursive=False)))
+    prefix = os.path.join(MODEL_DIR_PATH, 'spm-input-{}'.format(model_num))
 
     src_cmd = get_cmd(file_name, PAD_ID, SOS_ID,
                 EOS_ID, UNK_ID, prefix, VOCAB_SIZE, CHAR_COVERAGE, MODEL_TYPE)
