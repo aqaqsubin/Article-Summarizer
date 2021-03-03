@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import csv
+import argparse
 import pandas as pd
 import numpy as np
 from glob import iglob
@@ -12,11 +13,13 @@ from rouge import Rouge
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from model.transformer import transformer, CustomSchedule
-from module.Handle_Dir import mkdir_p, del_folder
+from module.dirHandler import mkdir_p, del_folder
 from module.encoder import IntegerEncoder
 from module.decoder import Decoder
+from module.parse import ParseBoolean
 
 BASE_DIR = os.getcwd()
+SRC_BASE_DIR = os.path.join(BASE_DIR, 'src')
 DATA_BASE_DIR = os.path.join(BASE_DIR, 'articles')
 
 PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Preprocessed-Data")
@@ -31,8 +34,8 @@ VAL_TITLE_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Title-Preprocess
 
 TRANSFORMER_PREDICT_PATH = os.path.join(SUMMARY_PREDICT_PATH,"Transformer-Predict-Data")
 
-WORD_ENCODING_DIR = os.path.join(BASE_DIR, 'Word-Encoding-Model')
-MODEL_DIR = os.path.join(BASE_DIR, 'trained-model')
+WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
+MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
 
 parser = argparse.ArgumentParser(description="Description")
 parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
@@ -107,31 +110,31 @@ def get_rouge_score(gen_summary, target_summary):
     try:
         rouge_scores = rouge.get_scores(predict_summary, target_summary)[0]
         rouge_L = rouge_scores['rouge-l']
-                rouge_L_f = rouge_L['f']
-                rouge_L_r = rouge_L['r']
-                rouge_L_p = rouge_L['p']
+        rouge_L_f = rouge_L['f']
+        rouge_L_r = rouge_L['r']
+        rouge_L_p = rouge_L['p']
 
-                print('ROUGE-L F1: {}'.format(rouge_L_f * 100))
-                print('ROUGE-L Recall: {}'.format(rouge_L_r * 100))
-                print('ROUGE-L Precision: {}\n'.format(rouge_L_p * 100))
+        print('ROUGE-L F1: {}'.format(rouge_L_f * 100))
+        print('ROUGE-L Recall: {}'.format(rouge_L_r * 100))
+        print('ROUGE-L Precision: {}\n'.format(rouge_L_p * 100))
 
-                rouge_1 = rouge_scores['rouge-1']
-                rouge_1_f = rouge_1['f']
-                rouge_1_r = rouge_1['r']
-                rouge_1_p = rouge_1['p']
+        rouge_1 = rouge_scores['rouge-1']
+        rouge_1_f = rouge_1['f']
+        rouge_1_r = rouge_1['r']
+        rouge_1_p = rouge_1['p']
 
-                print('ROUGE-1 F1: {}'.format(rouge_1_f * 100))
-                print('ROUGE-1 Recall: {}'.format(rouge_1_r * 100))
-                print('ROUGE-1 Precision: {}\n'.format(rouge_1_p * 100))
+        print('ROUGE-1 F1: {}'.format(rouge_1_f * 100))
+        print('ROUGE-1 Recall: {}'.format(rouge_1_r * 100))
+        print('ROUGE-1 Precision: {}\n'.format(rouge_1_p * 100))
 
-                rouge_2 = rouge_scores['rouge-2']
-                rouge_2_f = rouge_2['f']
-                rouge_2_r = rouge_2['r']
-                rouge_2_p = rouge_2['p']
+        rouge_2 = rouge_scores['rouge-2']
+        rouge_2_f = rouge_2['f']
+        rouge_2_r = rouge_2['r']
+        rouge_2_p = rouge_2['p']
 
-                print('ROUGE-2 F1: {}'.format(rouge_2_f * 100))
-                print('ROUGE-2 Recall: {}'.format(rouge_2_r * 100))
-                print('ROUGE-2 Precision: {}\n'.format(rouge_2_p * 100))
+        print('ROUGE-2 F1: {}'.format(rouge_2_f * 100))
+        print('ROUGE-2 Recall: {}'.format(rouge_2_r * 100))
+        print('ROUGE-2 Precision: {}\n'.format(rouge_2_p * 100))
 
 
     except IndexError as e:
