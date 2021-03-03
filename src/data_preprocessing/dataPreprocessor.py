@@ -151,11 +151,11 @@ def data_preprocessing(article_path, media_name):
             proc = {'Title' : article.title, 'Contents' : '\t'.join(clean_conts)}
             processed_dist = processed_dist.append(proc, ignore_index=True)
                 
-            print("Append : {title}\n{new}".format(title=article.title, new=clean_title))
+            # print("Append : {title}\r\n{new}".format(title=article.title, new=clean_title))
                 
         except Exception as err:
             print(err)
-            print("Drop Article : {title}".format(title=article.title))
+            # print("Drop Article : {title}".format(title=article.title))
             pass
 
     f.close()
@@ -203,7 +203,7 @@ if __name__ == '__main__':
         media_name = get_media_name(media_path)
         summary_dist, summary_proc_dist, title_proc_dist, processed_dist = data_preprocessing(media_path, media_name)
 
-        saveCSVFile(VALID_TITLE_PREPROCESSED_PATH, media_name, title_proc_dist)
-        saveCSVFile(VALID_PREPROCESSED_PATH, media_name, processed_dist)
-        saveCSVFile(VALID_SUMMARY_PREPROCESSED_PATH, media_name, summary_proc_dist)
-        saveCSVFile(VALID_SUMMARY_PATH, media_name, summary_dist)
+        saveCSVFile(VAL_TITLE_PREPROCESSED_PATH, media_name, title_proc_dist)
+        saveCSVFile(VAL_PREPROCESSED_PATH, media_name, processed_dist)
+        saveCSVFile(VAL_SUMMARY_PREPROCESSED_PATH, media_name, summary_proc_dist)
+        saveCSVFile(VAL_SUMMARY_PATH, media_name, summary_dist)
