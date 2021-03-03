@@ -3,6 +3,8 @@ import tensorflow as tf
 from model.transformer import PositionalEncoding, MultiHeadAttention, CustomSchedule
 from model.transformer import create_padding_mask, create_look_ahead_mask
 from model.transformer import encoder_layer, encoder, decoder_layer
+from tensorflow.keras.layers import LSTM, GRU, Activation, Conv1D, BatchNormalization,Dense,Bidirectional
+from tensorflow.keras.models import Sequential
 
 
 def rc_encoder(vocab_size, d_model, hidden_size, encoder_input, global_layers=1, cell='gru', dropout=0.1):
@@ -154,7 +156,7 @@ def decoder(vocab_size, num_layers, dff,
     
     for i in range(rc_enc_N):
         outputs = rc_decoder_layer(dff=dff, d_model=d_model, num_heads=num_heads,
-                                dropout=dropout, name='decoder_last_layer',
+                                dropout=dropout, name='decoder_{}_layer'.format(i),
                                 )(inputs=[outputs, enc_outputs, rc_enc_outputs, look_ahead_mask, padding_mask])
 
     return tf.keras.Model(
