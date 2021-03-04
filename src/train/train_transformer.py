@@ -34,6 +34,7 @@ TRANSFORMER_PREDICT_PATH = os.path.join(DATA_BASE_DIR,"Transformer-Predict-Data"
 
 WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
+TRANS_MODEL_DIR = os.path.join(MODEL_DIR, 'Transformer')
 
 # Get argument to determine the process
 parser = argparse.ArgumentParser(description="Description")
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
     
     MAX_LEN = get_max_length(input_encoded_list) + 2
-    SUMMARY_MAX_LEN = 150 + 2
+    SUMMARY_MAX_LEN = get_max_length(output_encoded_list) + 2
 
     # add SOS & EOS Token (Start of Sentence, End of Sentence)
     input_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, input_encoded_list))
@@ -169,12 +170,13 @@ if __name__ == '__main__':
         d_model=D_MODEL,
         num_heads=NUM_HEADS,
         dropout = 0.3)
-    checkpoint_dirpath = os.path.join(MODEL_DIR, "Transformer")
+
 
     # Initialize model train checkpoint
     mkdir_p(checkpoint_dirpath)
+    checkpoint_filepath = os.path.join(TRANS_MODEL_DIR, "checkpoint.ckpt")
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=checkpoint_dirpath,
+        filepath=checkpoint_filepath,
         save_weights_only=True,
         monitor='loss',
         mode='max',
