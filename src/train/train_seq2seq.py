@@ -35,6 +35,8 @@ VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Prepro
 
 WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, "trained-model")
+S2S_MODEL_DIR = os.path.join(MODEL_DIR, "Seq2Seq")
+
 
 # Get argument to determine the process
 parser = argparse.ArgumentParser(description="Description")
@@ -123,7 +125,6 @@ if __name__ == '__main__':
         target_data_path = SUMMARY_PREPROCESSED_PATH
 
     # Load src & target data for training model
-
     # src & target data integer encoding 
     input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()
     output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
@@ -187,8 +188,8 @@ if __name__ == '__main__':
     print ('Decoder output shape: (batch_size, vocab size) {}'.format(sample_decoder_output.shape))
     
     # Initialize model train checkpoint
-    checkpoint_prefix = os.path.join(MODEL_DIR, "Seq2Seq")
-    mkdir_p(checkpoint_prefix)
+    mkdir_p(S2S_MODEL_DIR)
+    checkpoint_prefix = os.path.join(S2S_MODEL_DIR, "checkpoint")
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                     encoder=encoder,
                                     decoder=decoder)
