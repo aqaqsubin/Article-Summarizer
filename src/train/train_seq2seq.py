@@ -10,10 +10,10 @@ from glob import iglob
 import tensorflow as tf
 import sentencepiece as spm
 
-sys.path.append("..")
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+print(sys.path)
 
 from model.seq2seq import Encoder, Decoder
-
 from module.dirHandler import mkdir_p, del_folder
 from module.encoder import IntegerEncoder
 from module.decoder import Decoder as IntegerDecoder
@@ -36,12 +36,13 @@ VAL_SUMMARY_PREPROCESSED_PATH = os.path.join(DATA_BASE_DIR,"Valid-Summary-Prepro
 WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, "trained-model")
 
+# Get argument to determine the process
 parser = argparse.ArgumentParser(description="Description")
 parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
-parser.add_argument('--n', required=True, type=int, help="Transformer + RC-Encoder (n)")
 
 args = parser.parse_args()
 
+# Load Sentencepiece word encoding model
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
 with open(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.vocab'.format(model_num)), encoding='utf-8') as f:
@@ -113,12 +114,17 @@ if __name__ == '__main__':
         'corpus' : None,
         'spm' : sp
     }
+
+    # src & target path depend on the process
     src_data_path = PREPROCESSED_PATH
     if args.headline:
         target_data_path = TITLE_PREPROCESSED_PATH
     else :
         target_data_path = SUMMARY_PREPROCESSED_PATH
 
+    # Load src & target data for training model
+
+    # src & target data integer encoding 
     input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()
     output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
 
@@ -127,8 +133,11 @@ if __name__ == '__main__':
     MAX_LEN = get_max_length(input_encoded_list) + 2
     SUMMARY_MAX_LEN = get_max_length(output_encoded_list) + 2
 
+    # add SOS & EOS Token (Start of Sentence, End of Sentence)
     input_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, input_encoded_list))
     output_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, output_encoded_list))
+
+    # Divide into Train dataset & Validation dataset
     input_train, input_test, output_train, output_test = train_test_split(
         input_encoded_list, output_encoded_list, test_size=0.2, random_state=42)
 
@@ -155,16 +164,20 @@ if __name__ == '__main__':
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     example_input_batch, example_target_batch = next(iter(dataset))
+
+    # optimizer and loss function
     optimizer = tf.keras.optimizers.Adam()
     loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True, reduction='none')
 
+    # Initialize Encoder
     encoder = Encoder(VOCAB_SIZE, D_MODEL, ENC_UNITS, BATCH_SIZE, cell='lstm')
     sample_output, sample_hidden = encoder(example_input_batch)
     print ('Encoder output shape: (batch size, sequence length, units) {}'.format(sample_output.shape))
     print ('Encoder Hidden state shape: (batch size, units) {}'.format(sample_hidden[0].shape))
     print ('Encoder Cell state shape: (batch size, units) {}'.format(sample_hidden[1].shape))
 
+    # Initialize Decoder
     decoder = Decoder(VOCAB_SIZE, D_MODEL, DEC_UNITS, BATCH_SIZE, cell='lstm')
 
     hidden = sample_hidden[0]
@@ -172,9 +185,10 @@ if __name__ == '__main__':
                                         hidden, sample_output)
 
     print ('Decoder output shape: (batch_size, vocab size) {}'.format(sample_decoder_output.shape))
-
-    mkdir_p(checkpoint_dirpath)
+    
+    # Initialize model train checkpoint
     checkpoint_prefix = os.path.join(MODEL_DIR, "Seq2Seq")
+    mkdir_p(checkpoint_prefix)
     checkpoint = tf.train.Checkpoint(optimizer=optimizer,
                                     encoder=encoder,
                                     decoder=decoder)
@@ -183,6 +197,7 @@ if __name__ == '__main__':
     BUFFER_SIZE = train_input_encoded_matrix.shape[0]
     steps_per_epoch = BUFFER_SIZE // BATCH_SIZE
 
+    # Training model
     for epoch in range(EPOCHS): 
         start = time.time()
 

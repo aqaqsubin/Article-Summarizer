@@ -35,10 +35,12 @@ TRANSFORMER_PREDICT_PATH = os.path.join(DATA_BASE_DIR,"Transformer-Predict-Data"
 WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
 
+# Get argument to determine the process
 parser = argparse.ArgumentParser(description="Description")
 parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
 args = parser.parse_args()
 
+# Load Sentencepiece word encoding model
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
 with open(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.vocab'.format(model_num)), encoding='utf-8') as f:
@@ -83,24 +85,30 @@ if __name__ == '__main__':
         'spm' : sp
     }
 
+    # src & target path depend on the process
     src_data_path = PREPROCESSED_PATH
     if args.headline:
         target_data_path = TITLE_PREPROCESSED_PATH
     else :
         target_data_path = SUMMARY_PREPROCESSED_PATH
 
+    # Load src & target data for training model
+    # src & target data integer encoding 
     input_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(src_data_path, '**.csv'), recursive=False))).encoder()
     output_encoded_list = IntegerEncoder(options=options, filepaths=list(iglob(os.path.join(target_data_path, '**.csv'), recursive=False))).encoder()
     
     MAX_LEN = get_max_length(input_encoded_list) + 2
     SUMMARY_MAX_LEN = 150 + 2
 
+    # add SOS & EOS Token (Start of Sentence, End of Sentence)
     input_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, input_encoded_list))
     output_encoded_list = list(map(lambda list_ : START_TOKEN + list_ + END_TOKEN, output_encoded_list))
 
+    # Divide into Train dataset & Validation dataset
     input_train, input_test, output_train, output_test = train_test_split(
         input_encoded_list, output_encoded_list, test_size=0.2, random_state=42)
 
+    # Padding
     train_input_encoded_matrix = tf.keras.preprocessing.sequence.pad_sequences(
         input_train, maxlen=MAX_LEN, padding='post')
     train_summary_encoded_matrix = tf.keras.preprocessing.sequence.pad_sequences(
@@ -145,6 +153,7 @@ if __name__ == '__main__':
     val_dataset = val_dataset.batch(BATCH_SIZE)
     val_dataset = val_dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
+    # Declaring optimizer
     lrate_scheduler = CustomSchedule(d_model=D_MODEL)
     beta_1 = 0.9  
     beta_2 = 0.98
@@ -152,6 +161,7 @@ if __name__ == '__main__':
 
     optimizer = tf.keras.optimizers.Adam(lrate_scheduler, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
+    # Initialize Transformer
     model = transformer(
         vocab_size=VOCAB_SIZE,
         num_layers=LAYER_NUM,
@@ -161,6 +171,7 @@ if __name__ == '__main__':
         dropout = 0.3)
     checkpoint_dirpath = os.path.join(MODEL_DIR, "Transformer")
 
+    # Initialize model train checkpoint
     mkdir_p(checkpoint_dirpath)
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_dirpath,
@@ -169,6 +180,7 @@ if __name__ == '__main__':
         mode='max',
         save_best_only=True)
     
+    # Training Model
     model.compile(optimizer=optimizer, loss=loss_function)
     model.summary()
 

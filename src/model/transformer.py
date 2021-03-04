@@ -110,19 +110,23 @@ def encoder_layer(dff, d_model, num_heads, dropout, name="encoder_layer"):
 
     padding_mask = tf.keras.Input(shape=(1, 1, None), name="padding_mask")
 
+    # Self-Attention
     attention = MultiHeadAttention(
       d_model, num_heads, name="attention")({
           'query': inputs, 'key': inputs, 'value': inputs, # Q = K = V
-          'mask': padding_mask # 패딩 마스크 사용
+          'mask': padding_mask 
       })
 
+    # Add & Normalize
     attention = tf.keras.layers.Dropout(rate=dropout)(attention)
     attention = tf.keras.layers.LayerNormalization(
         epsilon=1e-6)(inputs + attention)
 
+    # Feed Forward Network
     outputs = tf.keras.layers.Dense(units=dff, activation='relu')(attention)
     outputs = tf.keras.layers.Dense(units=d_model)(outputs)
 
+    # Add & Normalize
     outputs = tf.keras.layers.Dropout(rate=dropout)(outputs)
     outputs = tf.keras.layers.LayerNormalization(
         epsilon=1e-6)(attention + outputs)
@@ -140,8 +144,9 @@ def encoder(vocab_size, num_layers, dff,
 
     embeddings = tf.keras.layers.Embedding(vocab_size, d_model)(inputs)
     embeddings *= tf.math.sqrt(tf.cast(d_model, tf.float32))
-    embeddings = PositionalEncoding(vocab_size, d_model)(embeddings)
 
+    # Positional Encoding
+    embeddings = PositionalEncoding(vocab_size, d_model)(embeddings)
     outputs = tf.keras.layers.Dropout(rate=dropout)(embeddings)
 
     for i in range(num_layers):
@@ -162,28 +167,34 @@ def decoder_layer(dff, d_model, num_heads, dropout, name="decoder_layer"):
 
     padding_mask = tf.keras.Input(shape=(1, 1, None), name='padding_mask')
 
+    # Self-Attention
     attention1 = MultiHeadAttention(
       d_model, num_heads, name="attention_1")(inputs={
           'query': inputs, 'key': inputs, 'value': inputs, 
           'mask': look_ahead_mask 
       })
 
+    # Add & Normalize
     attention1 = tf.keras.layers.LayerNormalization(
       epsilon=1e-6)(attention1 + inputs)
 
+    # Multi-head Attention
     attention2 = MultiHeadAttention(
       d_model, num_heads, name="attention_2")(inputs={
           'query': attention1, 'key': enc_outputs, 'value': enc_outputs, 
           'mask': padding_mask 
       })
 
+    # Add & Normalize
     attention2 = tf.keras.layers.Dropout(rate=dropout)(attention2)
     attention2 = tf.keras.layers.LayerNormalization(
       epsilon=1e-6)(attention2 + attention1)
 
+    # Feed Forward Network
     outputs = tf.keras.layers.Dense(units=dff, activation='relu')(attention2)
     outputs = tf.keras.layers.Dense(units=d_model)(outputs)
 
+    # Add & Normalize
     outputs = tf.keras.layers.Dropout(rate=dropout)(outputs)
     outputs = tf.keras.layers.LayerNormalization(
       epsilon=1e-6)(outputs + attention2)
@@ -206,6 +217,8 @@ def decoder(vocab_size, num_layers, dff,
 
     embeddings = tf.keras.layers.Embedding(vocab_size, d_model)(inputs)
     embeddings *= tf.math.sqrt(tf.cast(d_model, tf.float32))
+
+    # Positional Encoding
     embeddings = PositionalEncoding(vocab_size, d_model)(embeddings)
     outputs = tf.keras.layers.Dropout(rate=dropout)(embeddings)
 
@@ -238,10 +251,12 @@ def transformer(vocab_size, num_layers, dff,
         create_padding_mask, output_shape=(1, 1, None),
         name='dec_padding_mask')(inputs)
 
+    # Encoder
     enc_outputs = encoder(vocab_size=vocab_size, num_layers=num_layers, dff=dff,
         d_model=d_model, num_heads=num_heads, dropout=dropout,
-        )(inputs=[inputs, enc_padding_mask]) # 인코더의 입력은 입력 문장과 패딩 마스크
+        )(inputs=[inputs, enc_padding_mask]) 
 
+    # Decoder
     dec_outputs = decoder(vocab_size=vocab_size, num_layers=num_layers, dff=dff,
         d_model=d_model, num_heads=num_heads, dropout=dropout,
         )(inputs=[dec_inputs, enc_outputs, look_ahead_mask, dec_padding_mask])

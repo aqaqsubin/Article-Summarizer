@@ -1,3 +1,5 @@
+# _*_ coding: utf-8 _*_
+
 import os
 import re
 import sys
@@ -10,7 +12,7 @@ import tensorflow as tf
 import sentencepiece as spm
 from rouge import Rouge 
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 from model.trans_rc_enc import transformer, CustomSchedule
 from module.dirHandler import mkdir_p, del_folder
@@ -42,12 +44,14 @@ TRANS_RC_ENC_PREDICT_PATH = os.path.join(SUMMARY_PREDICT_PATH,"Trans_RC_Encoder_
 WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
 
+# Get argument that determines the process and determines N
 parser = argparse.ArgumentParser(description="Description")
 parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
 parser.add_argument('--n', required=True, type=int, help="Transformer + RC-Encoder (n)")
 
 args = parser.parse_args()
 
+# Load Sentencepiece word encoding model
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
 with open(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.vocab'.format(model_num)), encoding='utf-8') as f:
@@ -164,6 +168,7 @@ if __name__ == '__main__':
         'spm' : sp
     }
 
+   # Load trained model checkpoint
     model = transformer(
         vocab_size=VOCAB_SIZE,
         num_layers=LAYER_NUM,
@@ -178,11 +183,13 @@ if __name__ == '__main__':
 
     model.load_weights(checkpoint_path)
 
+    # Initialize predict directory
     del_folder(TRANS_RC_ENC_PREDICT_PATH)
     mkdir_p(TRANS_RC_ENC_PREDICT_PATH)
     
     rouge = Rouge()
 
+    # src & target path depend on the process
     if args.headline:
         src_data_path = VAL_SUMMARY_PREPROCESSED_PATH
         target_data_path = VAL_TITLE_PREPROCESSED_PATH
@@ -190,6 +197,7 @@ if __name__ == '__main__':
         src_data_path = VAL_PREPROCESSED_PATH
         target_data_path = VAL_SUMMARY_PREPROCESSED_PATH
     
+    # Evaluate model with validation data
     for _, val_proc_path in enumerate(iglob(os.path.join(src_data_path, '**.csv'), recursive=False)):
 
         media_name = get_media_name(val_proc_path)
@@ -204,21 +212,23 @@ if __name__ == '__main__':
                                                 'ROUGE-1 F1', 'ROUGE-1 Recall', 'ROUGE-1 Precision',
                                                 'ROUGE-2 F1', 'ROUGE-2 Recall', 'ROUGE-2 Precision'])
 
+        # Read validation input data & target data
         for [_, title, contents], [_, _, target] in zip(csv.reader(f_src), csv.reader(f_tar)):
-            content = contents.split("\t")
-            target_summary = target.split("\t")
+            content = contents.split("\t")              # input data
+            target_summary = target.split("\t")         # target data
 
             encoder = IntergerEncoder(options=option, filepaths=None)
             input_sent = ' '.join(content)
-            input_enc_sent = START_TOKEN + encoder.line_encoder(content_line) + END_TOKEN
+            input_enc_sent = START_TOKEN + encoder.line_encoder(input_sent) + END_TOKEN
 
-            predict_summary = predict(input_enc_sent)
+            predict_summary = predict(input_enc_sent)   # generated data
             target_summary = ' '.join(target_summary)
 
             print('Input: {}'.format(input_sent))
             print('Target: {}'.format(target_summary))
             print('Output: {}'.format(predict_summary))
 
+            # Get ROUGE score
             rouge_scores = get_rouge_score(predict_summary, target_summary)
             
             summary = {'Origin Contents' : input_sent, 'Generated Summary' : predict_summary, 'Target Summary' : target_summary,

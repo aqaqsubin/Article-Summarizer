@@ -26,6 +26,13 @@ def get_append_option(filename):
 
 
 def get_search_page_list(ds, de):
+    """Returns List of naver search page URL from ds to de dates
+    Args:
+        ds (datetime): Start datetime
+        de (datetime): End datatime
+    Returns:
+        search_page_list (list) : List of collected naver search page URL from ds to de dates
+    """
 
     search_page_list = []
 
@@ -79,6 +86,7 @@ def save_article_info(article_info):
 
     if not NAVER_NEWS_BASE_URL in article_info['src_addr']: return
 
+    # Save query in SQL_FILE_PATH 
     baseQuery = "INSERT INTO news_list (title, media, url) VALUES ({title}, {media}, {url});"
     query = baseQuery.format(title=article_info['title'], media=article_info['media'],
                              url=article_info['src_addr'])
@@ -90,10 +98,12 @@ def save_article_info(article_info):
     fileStat = os.stat(SQL_FILE_PATH)
     fileSize = fileStat.st_size
 
+    # If SQL_FILE_PATH file size is greater than 100KB, insert to database
     if fileSize > 100 * 1000: insert_to_db()
 
 def get_article_list():
 
+    # 크롤링 수집 시작 날짜는 현재 시각
     ds = datetime.now()
     de = datetime.now()
 
@@ -104,8 +114,9 @@ def get_article_list():
             page_response = requests.get(page_url, headers={'User-Agent': USER_AGENT})
             page_html = BeautifulSoup(page_response.text, "html.parser")
 
-
             article_area_list = page_html.select("ul.list_news > li.bx ")
+            
+            # Collect articles on each page
             for idx, article_area in enumerate(article_area_list):
                 article = article_area_list[idx].select_one("div.news_wrap.api_ani_send > div.news_area")
                 title, media, src_addr = parse_article_info(article)

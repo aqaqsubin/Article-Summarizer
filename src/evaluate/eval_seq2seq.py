@@ -1,3 +1,5 @@
+# _*_ coding: utf-8 _*_
+
 import os
 import re
 import sys
@@ -10,7 +12,8 @@ import tensorflow as tf
 import sentencepiece as spm
 from rouge import Rouge 
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+print(sys.path)
 
 from model.seq2seq import Encoder, Decoder
 from module.dirHandler import mkdir_p, del_folder
@@ -38,11 +41,13 @@ WORD_ENCODING_DIR = os.path.join(SRC_BASE_DIR, 'Word-Encoding-Model')
 MODEL_DIR = os.path.join(SRC_BASE_DIR, 'trained-model')
 S2S_MODEL_DIR = os.path.join(MODEL_DIR, "seq2seq")
 
+# Get argument to determine the process
 parser = argparse.ArgumentParser(description="Description")
 parser.add_argument('--headline', required=True, type=ParseBoolean, help="If True, Generating Headline else Generating Summary")
 
 args = parser.parse_args()
 
+# Load Sentencepiece word encoding model
 sp = spm.SentencePieceProcessor()
 model_num = len(list(iglob(os.path.join(WORD_ENCODING_DIR, 'spm-input-*.vocab'), recursive=False))) -1
 with open(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.vocab'.format(model_num)), encoding='utf-8') as f:
@@ -51,6 +56,9 @@ sp.Load(os.path.join(WORD_ENCODING_DIR, 'spm-input-{}.model').format(model_num))
 
 VOCAB_SIZE = len(Vo)
 D_MODEL = 128
+ENC_UNITS = 128
+DEC_UNITS = ENC_UNITS * 2
+
 SUMMARY_MAX_LEN = 150 + 2
 START_TOKEN = [sp.bos_id()]
 END_TOKEN = [sp.eos_id()]
@@ -161,7 +169,9 @@ if __name__ == '__main__':
 
     encoder = Encoder(VOCAB_SIZE, D_MODEL, ENC_UNITS, BATCH_SIZE, cell='lstm')
     decoder = Decoder(VOCAB_SIZE, D_MODEL, DEC_UNITS, BATCH_SIZE, cell='lstm')
+    optimizer = tf.keras.optimizers.Adam()
 
+   # Load trained model checkpoint
     ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
                            optimizer = optimizer)
@@ -169,11 +179,13 @@ if __name__ == '__main__':
     if ckpt_manager.latest_checkpoint:
         ckpt.restore(ckpt_manager.latest_checkpoint)
 
+    # Initialize predict directory
     del_folder(SEQ2SEQ_PREDICT_PATH)
     mkdir_p(SEQ2SEQ_PREDICT_PATH)
     
     rouge = Rouge()
     
+    # src & target path depend on the process
     if args.headline:
         src_data_path = VAL_SUMMARY_PREPROCESSED_PATH
         target_data_path = VAL_TITLE_PREPROCESSED_PATH
@@ -181,6 +193,7 @@ if __name__ == '__main__':
         src_data_path = VAL_PREPROCESSED_PATH
         target_data_path = VAL_SUMMARY_PREPROCESSED_PATH
 
+    # Evaluate model with validation data
     for _, val_proc_path in enumerate(iglob(os.path.join(src_data_path, '**.csv'), recursive=False)):
 
         media_name = get_media_name(val_proc_path)
@@ -195,29 +208,31 @@ if __name__ == '__main__':
                                                 'ROUGE-1 F1', 'ROUGE-1 Recall', 'ROUGE-1 Precision',
                                                 'ROUGE-2 F1', 'ROUGE-2 Recall', 'ROUGE-2 Precision'])
 
+        # Read validation input data & target data
         for [_, title, contents], [_, _, target] in zip(csv.reader(f_src), csv.reader(f_tar)):
-            content = contents.split("\t")
-            target_summary = target.split("\t")
+            content = contents.split("\t")              # input data
+            target_summary = target.split("\t")         # target data
 
-            encoder = IntergerEncoder(options=option, filepaths=None)
+            integer_encoder = IntegerEncoder(options=options, filepaths=None)
             input_sent = ' '.join(content)
-            input_enc_sent = START_TOKEN + encoder.line_encoder(content_line) + END_TOKEN
+            input_enc_sent = START_TOKEN + integer_encoder.line_encoder(input_sent) + END_TOKEN
 
-            predict_summary = summary(input_enc_sent)
+            predict_summary = summary(input_enc_sent)   # generated data
             target_summary = ' '.join(target_summary)
 
             print('Input: {}'.format(input_sent))
             print('Target: {}'.format(target_summary))
             print('Output: {}'.format(predict_summary))
 
-            rouge_scores = get_rouge_score(predict_summary, target_summary)
+            # Get ROUGE score
+            rouge_scores = get_rouge_score(predict_summary, target_summary) 
             
-            summary = {'Origin Contents' : input_sent, 'Generated Summary' : predict_summary, 'Target Summary' : target_summary,
+            summary_dict = {'Origin Contents' : input_sent, 'Generated Summary' : predict_summary, 'Target Summary' : target_summary,
                    'ROUGE-L F1': rouge_scores['ROUGE-L F1'], 'ROUGE-L Recall': rouge_scores['ROUGE-L Recall'], 'ROUGE-L Precision': rouge_scores['ROUGE-L Precision'],
                    'ROUGE-1 F1': rouge_scores['ROUGE-1 F1'], 'ROUGE-1 Recall': rouge_scores['ROUGE-1 Recall'], 'ROUGE-1 Precision': rouge_scores['ROUGE-1 Precision'],
                    'ROUGE-2 F1': rouge_scores['ROUGE-2 F1'], 'ROUGE-2 Recall': rouge_scores['ROUGE-2 Recall'], 'ROUGE-2 Precision': rouge_scores['ROUGE-2 Precision']}
 
-            validation_generated_dist = validation_generated_dist.append(summary, ignore_index=True)
+            validation_generated_dist = validation_generated_dist.append(summary_dict, ignore_index=True)
             print("Current ROUGE-L mean : {}".format(np.mean(validation_generated_dist['ROUGE-L F1'])))
 
         print("ROUGE-1 mean : {}".format(np.mean(validation_generated_dist['ROUGE-1 F1'])))

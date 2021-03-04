@@ -16,6 +16,12 @@ NAVER_NEWS_URL_REGEX = "https?://news.naver.com"
 
 
 def get_media_list_fromDB(db):
+    """Returns Media list of collected articles
+    Args:
+        db (dbHandler): database
+    Returns:
+        media_list (list) : Media list of collected articles
+    """
 
     sql = "SELECT DISTINCT media FROM news_list;"
     media_list = db.query(sql)
@@ -25,6 +31,14 @@ def get_media_list_fromDB(db):
 
 
 def get_article_list_fromDB(db, media_name):
+
+    """Returns article list from database by media name
+    Args:
+        db (dbHandler): database
+        media_name (str) : article media name
+    Returns:
+        article_list (list) : article list from database by media name
+    """
 
     article_list = []
     sql = "SELECT * FROM news_list WHERE media = '{}';".format(media_name)
@@ -45,6 +59,7 @@ if __name__ == "__main__":
     
     db = dbHandler(host='localhost', dbname='newsdb', user='subinkim', password='123', port='5432')
 
+    # Get media list
     media_list = get_media_list_fromDB(db)
 
     for media_name in media_list :
@@ -52,9 +67,13 @@ if __name__ == "__main__":
 
         article_list = get_article_list_fromDB(db, media_name)
         article_dist = pd.DataFrame(columns=['Title', 'Contents'])
+
+        # Loading of collected articles by media
         for article_no, article in enumerate(article_list):
 
             articleParser = ArticleHtmlParser(article.url, USER_AGENT)
+            
+            # If invalid url, pass
             if not articleParser.checkUrlValid(NAVER_NEWS_URL_REGEX): continue
             print(articleParser.getUrl())
 

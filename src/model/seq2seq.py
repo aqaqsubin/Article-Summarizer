@@ -3,6 +3,8 @@ from tensorflow.keras.layers import Input
 import numpy as np
 from tensorflow.keras.layers import Input, LSTM, Embedding, Dense, Concatenate
 
+# Sequence-to-Sequence Model with Bahdanau Attention mechanism
+
 class BahdanauAttention(tf.keras.layers.Layer):
     def __init__(self, units):
         super(BahdanauAttention, self).__init__()
@@ -41,6 +43,7 @@ class Encoder(tf.keras.Model):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
 
         self.cell = cell
+        # Encoder consists of GRU or LSTM cells.
         if self.cell is 'gru':
             self.rnn =tf.keras.layers.Bidirectional(tf.keras.layers.GRU(self.enc_units,
                                        return_sequences=True,
@@ -78,6 +81,7 @@ class Decoder(tf.keras.Model):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
         
         self.cell = cell
+        # Decoder consists of GRU or LSTM cells.
         if self.cell is 'gru':
             self.rnn =tf.keras.layers.GRU(self.dec_units,
                                        return_sequences=True,

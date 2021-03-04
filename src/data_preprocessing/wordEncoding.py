@@ -55,6 +55,13 @@ def get_cmd(filename, pad_id, sos_id, eos_id, unk_id, prefix, vocab_size, charac
     return cmd
     
 def get_text(basepath):
+    """Return the sentence list in basepath
+    Args:
+        basepath (str): articles path
+    Returns:
+        result (list) : List of sentences in articles in basepath
+    """
+
     result = []
 
     for idx, proc_article_path in enumerate(iglob(os.path.join(basepath, '**.csv'), recursive=False)):
@@ -75,6 +82,7 @@ if __name__ == '__main__':
 
     file_name = os.path.join(MODEL_DIR_PATH, "SentencePiece.txt")
 
+    # Get sentence list
     headline_tar_text = get_text(VAL_TITLE_PREPROCESSED_PATH)
     headline_src_text = get_text(VAL_PREPROCESSED_PATH)
     tar_text = get_text(TITLE_PREPROCESSED_PATH)
@@ -83,6 +91,7 @@ if __name__ == '__main__':
     with open(file_name, 'w', encoding='utf-8') as f:
         f.write('\n'.join(headline_src_text + headline_tar_text + src_text + tar_text))
 
+    # Train Word encoding model
     model_num = len(list(iglob(os.path.join(MODEL_DIR_PATH, 'spm-input-*.vocab'), recursive=False)))
     prefix = os.path.join(MODEL_DIR_PATH, 'spm-input-{}'.format(model_num))
 
